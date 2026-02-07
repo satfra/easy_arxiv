@@ -1,0 +1,1 @@
+The scientific method: 1. Coffee. 2. Open arXiv. 3. Existential dread. This tool automates step 2, giving you more time for step 1 (and hopefully less of step 3).
