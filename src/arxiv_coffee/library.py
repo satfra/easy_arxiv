@@ -224,3 +224,20 @@ def addToLibrary(result: SummaryResult, output_dir: Path) -> Path:
         updateLibraryIndex(output_dir)
 
     return summary_path
+
+
+def deleteFromLibrary(summary_path: Path, output_dir: Path) -> None:
+    """Delete a summary file and update the library index.
+
+    Removes the markdown file, cleans up the parent category directory
+    if it becomes empty, and rebuilds library.md.
+    """
+    if summary_path.exists():
+        summary_path.unlink()
+
+    # Remove the category subdirectory if it is now empty.
+    parent = summary_path.parent
+    if parent != output_dir and parent.exists() and not any(parent.iterdir()):
+        parent.rmdir()
+
+    updateLibraryIndex(output_dir)

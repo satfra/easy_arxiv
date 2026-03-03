@@ -8,11 +8,11 @@ from urllib.parse import quote
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Horizontal
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable
+from textual.containers import Horizontal, Vertical
+from textual.screen import ModalScreen, Screen
+from textual.widgets import Header, Footer, Static, Input, Button, DataTable, Label
 
-from arxiv_coffee.library import parseSummaryFile
+from arxiv_coffee.library import deleteFromLibrary, parseSummaryFile
 from arxiv_coffee.models import AppConfig
 from arxiv_coffee.screens.summary import SummaryScreen
 
@@ -42,12 +42,72 @@ def _openInObsidian(vault_path: Path) -> None:
         subprocess.Popen(["xdg-open", uri])
 
 
+class _ConfirmDeleteScreen(ModalScreen[bool]):
+    """Modal dialog asking the user to confirm a deletion."""
+
+    CSS = """
+    _ConfirmDeleteScreen {
+        align: center middle;
+    }
+
+    #confirm-dialog {
+        width: 60;
+        height: auto;
+        padding: 1 2;
+        border: thick $primary;
+        background: $surface;
+    }
+
+    #confirm-dialog Label {
+        width: 100%;
+        margin: 0 0 1 0;
+    }
+
+    #confirm-buttons {
+        width: 100%;
+        height: 3;
+        align: center middle;
+    }
+
+    #confirm-buttons Button {
+        margin: 0 1;
+    }
+    """
+
+    BINDINGS = [
+        ("escape", "cancel", "Cancel"),
+    ]
+
+    def __init__(self, title: str) -> None:
+        super().__init__()
+        self._title = title
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm-dialog"):
+            yield Label(f"Delete [bold]{self._title}[/bold]?")
+            with Horizontal(id="confirm-buttons"):
+                yield Button("Delete", variant="error", id="confirm-yes")
+                yield Button("Cancel", variant="default", id="confirm-no")
+
+    @on(Button.Pressed, "#confirm-yes")
+    def onConfirm(self) -> None:
+        self.dismiss(True)
+
+    @on(Button.Pressed, "#confirm-no")
+    def onCancel(self) -> None:
+        self.dismiss(False)
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class LibraryScreen(Screen):
     """Browse previously summarized papers."""
 
     BINDINGS = [
         ("escape", "app.pop_screen", "Back"),
         ("/", "focusSearch", "Search"),
+        ("d", "deleteEntry", "Delete"),
     ]
 
     CSS = """
@@ -174,6 +234,38 @@ class LibraryScreen(Screen):
 
     def action_focusSearch(self) -> None:
         self.query_one("#search-input", Input).focus()
+
+    def action_deleteEntry(self) -> None:
+        """Delete the currently highlighted library entry."""
+        table = self.query_one("#lib-table", DataTable)
+        if table.row_count == 0:
+            self.notify("Nothing to delete.", severity="warning")
+            return
+
+        row_key, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
+        file_path = Path(str(row_key.value))
+
+        # Find the entry title for the confirmation dialog.
+        title = file_path.stem
+        for entry in self.entries:
+            if entry["path"] == file_path:
+                title = entry["title"]
+                break
+
+        def _onConfirm(confirmed: bool) -> None:
+            if not confirmed:
+                return
+            try:
+                deleteFromLibrary(file_path, self.config.output_dir)
+                self.notify(f"Deleted: {title}")
+            except OSError as exc:
+                self.notify(f"Delete failed: {exc}", severity="error")
+                return
+            self._loadEntries()
+            search_text = self.query_one("#search-input", Input).value
+            self._populateTable(search_text)
+
+        self.app.push_screen(_ConfirmDeleteScreen(title), callback=_onConfirm)
 
     @on(Input.Changed, "#search-input")
     def onSearchChanged(self, event: Input.Changed) -> None:
