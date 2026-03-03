@@ -50,6 +50,7 @@ class AppConfig:
     api_key: str = ""
     model: str = "openai/gpt-4o"
     base_url: str = ""
+    requests_per_minute: int = 0
 
     # arXiv settings
     categories: list[str] = field(default_factory=lambda: ["hep-ph"])

@@ -29,6 +29,7 @@ def loadConfig(path: Path | None = None) -> AppConfig:
         api_key=llm.get("api_key", ""),
         model=llm.get("model", "openai/gpt-4o"),
         base_url=llm.get("base_url", ""),
+        requests_per_minute=llm.get("requests_per_minute", 0),
         categories=arxiv.get("categories", ["hep-ph"]),
         max_papers=arxiv.get("max_papers", 50),
         interests_file=Path(
@@ -50,6 +51,7 @@ def saveConfig(config: AppConfig, path: Path | None = None) -> Path:
             "api_key": config.api_key,
             "model": config.model,
             "base_url": config.base_url,
+            "requests_per_minute": config.requests_per_minute,
         },
         "arxiv": {
             "categories": config.categories,
@@ -64,6 +66,8 @@ def saveConfig(config: AppConfig, path: Path | None = None) -> Path:
     # Remove empty optional fields to keep the file clean
     if not data["llm"]["base_url"]:
         del data["llm"]["base_url"]
+    if not data["llm"]["requests_per_minute"]:
+        del data["llm"]["requests_per_minute"]
 
     with open(config_path, "wb") as f:
         tomli_w.dump(data, f)

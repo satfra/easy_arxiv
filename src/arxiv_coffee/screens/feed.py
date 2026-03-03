@@ -22,7 +22,7 @@ from textual.widgets import (
 )
 
 from arxiv_coffee.arxiv_client import fetchLatestPapers, fetchPapersByDateRange
-from arxiv_coffee.llm import filterPapersByRelevance, summarizePaper
+from arxiv_coffee.llm import createRateLimiter, filterPapersByRelevance, summarizePaper
 from arxiv_coffee.library import addToLibrary
 from arxiv_coffee.models import AppConfig, Paper, SummaryResult
 from arxiv_coffee.pdf_extractor import downloadAndExtract
@@ -461,10 +461,18 @@ class FeedScreen(Screen):
         )
 
         try:
+
+            def _onBatchDone(done: int, total: int) -> None:
+                self._setStatus(
+                    f"AI filtering — batch {done}/{total} done "
+                    f"({len(self.papers)} papers, {self.config.model})"
+                )
+
             self.papers = await filterPapersByRelevance(
                 self.papers,
                 interests,
                 self.config,
+                on_batch_done=_onBatchDone,
             )
             self._populateTable()
             top_score = max(
@@ -512,6 +520,7 @@ class FeedScreen(Screen):
         self._showProgress(True, total)
         success = 0
         errors = 0
+        limiter = createRateLimiter(self.config)
 
         for i, paper in enumerate(papers_to_summarize, 1):
             self._updateProgress(
@@ -531,7 +540,9 @@ class FeedScreen(Screen):
                 )
 
                 # Summarize with LLM
-                summary_text = await summarizePaper(paper, full_text, self.config)
+                summary_text = await summarizePaper(
+                    paper, full_text, self.config, limiter=limiter
+                )
 
                 # Write to library
                 result = SummaryResult(

@@ -42,6 +42,7 @@ class SettingsScreen(Screen):
   }
 
   .form-group {
+    height: auto;
     margin-bottom: 1;
   }
 
@@ -117,6 +118,18 @@ class SettingsScreen(Screen):
                         id="base-url",
                     )
 
+                with Vertical(classes="form-group"):
+                    yield Label("Requests per minute", classes="form-label")
+                    yield Static(
+                        "0 = unlimited (provider default)",
+                        classes="form-hint",
+                    )
+                    yield Input(
+                        value=str(self.config.requests_per_minute),
+                        id="requests-per-minute",
+                        type="integer",
+                    )
+
                 yield Static("arXiv Settings", classes="section-title")
 
                 with Vertical(classes="form-group"):
@@ -189,6 +202,7 @@ class SettingsScreen(Screen):
         api_key = self.query_one("#api-key", Input).value.strip()
         model = self.query_one("#model", Input).value.strip()
         base_url = self.query_one("#base-url", Input).value.strip()
+        rpm_str = self.query_one("#requests-per-minute", Input).value.strip()
 
         cats_raw = self.query_one("#categories", Input).value
         categories = [c.strip() for c in cats_raw.split(",") if c.strip()]
@@ -219,6 +233,14 @@ class SettingsScreen(Screen):
             warnings.append("Invalid max papers \u2014 defaulting to 50.")
             max_papers = 50
 
+        try:
+            requests_per_minute = int(rpm_str) if rpm_str else 0
+            if requests_per_minute < 0:
+                raise ValueError
+        except ValueError:
+            warnings.append("Invalid requests/min \u2014 defaulting to 0 (unlimited).")
+            requests_per_minute = 0
+
         if not output_dir_str:
             warnings.append("Output dir is empty \u2014 using ./output.")
             output_dir_str = "./output"
@@ -235,6 +257,7 @@ class SettingsScreen(Screen):
         self.config.api_key = api_key
         self.config.model = model
         self.config.base_url = base_url
+        self.config.requests_per_minute = requests_per_minute
         self.config.categories = categories
         self.config.max_papers = max_papers
         self.config.output_dir = output_dir
