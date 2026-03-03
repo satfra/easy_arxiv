@@ -459,8 +459,11 @@ class FeedScreen(Screen):
             )
             return
 
+        batch_size = 5
+        total_batches = (len(self.papers) + batch_size - 1) // batch_size
+
         self._setBusy(True)
-        self._showLoading(True)
+        self._showProgress(True, total_batches)
         self._setStatus(
             f"AI filtering {len(self.papers)} papers using {self.config.model}..."
         )
@@ -468,15 +471,18 @@ class FeedScreen(Screen):
         try:
 
             def _onBatchDone(done: int, total: int) -> None:
-                self._setStatus(
-                    f"AI filtering — batch {done}/{total} done "
-                    f"({len(self.papers)} papers, {self.config.model})"
+                self._updateProgress(
+                    done,
+                    total,
+                    f"AI filtering — batch {done}/{total} "
+                    f"({len(self.papers)} papers, {self.config.model})",
                 )
 
             self.papers = await filterPapersByRelevance(
                 self.papers,
                 interests,
                 self.config,
+                batch_size=batch_size,
                 on_batch_done=_onBatchDone,
             )
             self._populateTable()
@@ -497,7 +503,7 @@ class FeedScreen(Screen):
             self.notify(f"AI filter failed: {e}", severity="error", title="LLM Error")
             self._setStatus(f"Filter error: {e}")
         finally:
-            self._showLoading(False)
+            self._showProgress(False, 0)
             self._setBusy(False)
 
     @work(thread=False)
