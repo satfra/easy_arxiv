@@ -21,6 +21,7 @@ from textual.widgets import (
 )
 
 from arxiv_coffee.arxiv_client import fetchLatestPapers, fetchPapersByDateRange
+from arxiv_coffee.copilot_auth import isCopilotModel, needsCopilotAuth
 from arxiv_coffee.llm import createRateLimiter, filterPapersByRelevance, summarizePaper
 from arxiv_coffee.library import addToLibrary
 from arxiv_coffee.markdown import MathMarkdown
@@ -430,12 +431,7 @@ class FeedScreen(Screen):
             self.notify("No papers to filter. Fetch first.", severity="warning")
             return
 
-        if not self.config.api_key:
-            self.notify(
-                "No API key configured. Go to Settings (press Escape, then s).",
-                severity="error",
-                title="Missing API Key",
-            )
+        if not await self._ensureLlmAuth():
             return
 
         # Load interests
@@ -505,12 +501,7 @@ class FeedScreen(Screen):
             )
             return
 
-        if not self.config.api_key:
-            self.notify(
-                "No API key configured. Go to Settings (press Escape, then s).",
-                severity="error",
-                title="Missing API Key",
-            )
+        if not await self._ensureLlmAuth():
             return
 
         papers_to_summarize = [p for p in self.papers if p.short_id in self.selected]
@@ -580,6 +571,38 @@ class FeedScreen(Screen):
     # -------------------------------------------------------------------
     # Helpers
     # -------------------------------------------------------------------
+
+    async def _ensureLlmAuth(self) -> bool:
+        """Verify that LLM credentials are available before making calls.
+
+        For most providers this checks for a non-empty API key. For
+        github_copilot/ models it checks for a cached OAuth token and
+        shows the interactive device-flow modal when one is missing.
+
+        Returns True if auth is ready, False if the user cancelled or
+        auth failed.
+        """
+        if isCopilotModel(self.config.model):
+            if needsCopilotAuth():
+                from arxiv_coffee.screens.copilot_auth import CopilotAuthScreen
+
+                result = await self.app.push_screen_wait(CopilotAuthScreen())
+                if not result:
+                    self.notify(
+                        "Copilot authentication cancelled.",
+                        severity="warning",
+                    )
+                    return False
+            return True
+
+        if not self.config.api_key:
+            self.notify(
+                "No API key configured. Go to Settings (press Escape, then s).",
+                severity="error",
+                title="Missing API Key",
+            )
+            return False
+        return True
 
     def _populateTable(self) -> None:
         """Fill the DataTable with current papers."""

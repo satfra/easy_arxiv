@@ -52,6 +52,8 @@ Your summary should include:
 Guidelines:
 - Be precise and technical — the reader is a physicist.
 - Use LaTeX notation for equations where helpful (e.g. $m_H = 125$ GeV).
+- For important standalone equations, use display math with double dollar signs
+  on their own line (e.g. $$E = mc^2$$) so they render prominently.
 - Keep the summary between 300-600 words.
 - Do NOT include the abstract (it will be added separately).
 - Use markdown headers (##) for each section.
@@ -62,12 +64,22 @@ Guidelines:
 # ---------------------------------------------------------------------------
 
 
+def _modelHandlesAuth(model: str) -> bool:
+    """Check if a model provider handles authentication internally.
+
+    Some providers (e.g. github_copilot/) use OAuth device flow managed
+    by litellm and do not require a user-supplied API key.
+    """
+    return model.startswith("github_copilot/")
+
+
 def _buildCompletionKwargs(config: AppConfig) -> dict:
     """Build common kwargs for litellm calls from config."""
     kwargs: dict = {
         "model": config.model,
-        "api_key": config.api_key,
     }
+    if config.api_key:
+        kwargs["api_key"] = config.api_key
     if config.base_url:
         kwargs["base_url"] = config.base_url
     return kwargs
@@ -221,7 +233,7 @@ async def filterPapersByRelevance(
     if not papers:
         return []
 
-    if not config.api_key:
+    if not config.api_key and not _modelHandlesAuth(config.model):
         raise ValueError("No API key configured. Set llm.api_key in config.toml.")
 
     kwargs = _buildCompletionKwargs(config)
@@ -277,7 +289,7 @@ async def summarizePaper(
     Returns the summary as a markdown string.  When a *limiter* is supplied
     the call will respect the configured requests-per-minute cap.
     """
-    if not config.api_key:
+    if not config.api_key and not _modelHandlesAuth(config.model):
         raise ValueError("No API key configured. Set llm.api_key in config.toml.")
 
     kwargs = _buildCompletionKwargs(config)

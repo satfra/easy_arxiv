@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from arxiv_coffee.terminal_caps import HAS_MATH_IMAGE  # noqa: F401
+
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding

@@ -106,7 +106,7 @@ class SettingsScreen(Screen):
                 with Vertical(classes="form-group"):
                     yield Label("Model", classes="form-label")
                     yield Static(
-                        "litellm format: openai/gpt-4o, anthropic/claude-sonnet-4-20250514, etc.",
+                        "litellm format: openai/gpt-4o, anthropic/claude-sonnet-4-20250514, github_copilot/gpt-4o, etc.",
                         classes="form-hint",
                     )
                     yield Input(value=self.config.model, id="model")
@@ -215,7 +215,7 @@ class SettingsScreen(Screen):
         # --- Validation ---
         warnings: list[str] = []
 
-        if not api_key:
+        if not api_key and not model.startswith("github_copilot/"):
             warnings.append("API key is empty \u2014 AI features won't work.")
 
         if not model:

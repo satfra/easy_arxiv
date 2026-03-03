@@ -16,6 +16,12 @@ dependencies = [
   "mdit-py-plugins>=0.4.0",
 ]
 
+[project.optional-dependencies]
+graphics = [
+    "matplotlib>=3.8.0",
+    "textual-image>=0.8.5",
+]
+
 [project.scripts]
 arxiv-coffee = "arxiv_coffee.app:run"
 

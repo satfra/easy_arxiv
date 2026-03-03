@@ -4,11 +4,13 @@ from markdown_it import MarkdownIt
 from markdown_it.token import Token
 from mdit_py_plugins.dollarmath import dollarmath_plugin
 
+from textual.app import ComposeResult
 from textual.content import Content
 from textual.widgets import Markdown
 from textual.widgets._markdown import MarkdownBlock, MarkdownParagraph
 
 from arxiv_coffee.latex import latexToUnicode
+from arxiv_coffee.terminal_caps import HAS_MATH_IMAGE
 
 
 def _createMathParser() -> MarkdownIt:
@@ -39,20 +41,36 @@ class _MathParagraph(_MathPreprocessMixin, MarkdownParagraph):
 
 
 class _MarkdownMathBlock(MarkdownBlock):
-    """Renders a display-math block as Unicode text."""
+    """Renders a display-math block as an image when possible, Unicode otherwise."""
 
     DEFAULT_CSS = """
     _MarkdownMathBlock {
         margin: 1 0;
         padding: 0 4;
-        color: $text;
+        height: auto;
     }
     """
 
     def __init__(self, markdown: Markdown, token: Token) -> None:
         super().__init__(markdown, token)
-        converted = latexToUnicode(token.content.strip())
-        self.set_content(Content(converted))
+        self._latex = token.content.strip()
+        self._use_image = HAS_MATH_IMAGE
+        if not self._use_image:
+            # No image support — render Unicode text immediately
+            self.set_content(Content(latexToUnicode(self._latex)))
+
+    def compose(self) -> ComposeResult:
+        if self._use_image:
+            try:
+                from arxiv_coffee.latex_render import renderLatexToImage
+                from textual_image.widget import Image as TerminalImage
+
+                pil_img = renderLatexToImage(self._latex)
+                yield TerminalImage(pil_img)
+            except Exception:
+                # Rendering failed — fall back to Unicode
+                self.set_content(Content(latexToUnicode(self._latex)))
+        yield from self._blocks
 
 
 class MathMarkdown(Markdown):

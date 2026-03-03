@@ -58,7 +58,7 @@ cp config.toml.example ~/.config/arxiv-coffee/config.toml
 | Setting | Description | Example |
 |---------|-------------|---------|
 | `llm.api_key` | API key for your LLM provider | `sk-...` |
-| `llm.model` | Model in litellm format | `openai/gpt-4o`, `anthropic/claude-sonnet-4-20250514` |
+| `llm.model` | Model in litellm format | `openai/gpt-4o`, `anthropic/claude-sonnet-4-20250514`, `github_copilot/gpt-4o` |
 
 ### Optional settings
 
@@ -73,6 +73,39 @@ cp config.toml.example ~/.config/arxiv-coffee/config.toml
 ### Interests file
 
 Create a markdown file describing your research interests. The AI uses this to score papers by relevance. See `interests.md.example` for the expected format.
+
+### Using GitHub Copilot as the LLM provider
+
+If you have a [GitHub Copilot](https://github.com/features/copilot) subscription, you can use it as your LLM provider with no separate API key required. litellm handles authentication automatically via GitHub's OAuth device flow.
+
+1. Set the model to a `github_copilot/` prefixed model name in your config:
+
+```toml
+[llm]
+api_key = ""
+model = "github_copilot/gpt-4o"
+```
+
+2. On first run, litellm will print a device code and a URL in the terminal. Open the URL, enter the code, and authorize the app with your GitHub account.
+
+3. Credentials are cached locally — subsequent runs authenticate automatically.
+
+Available models depend on your Copilot plan. Common options:
+
+| Model string | Description |
+|---|---|
+| `github_copilot/gpt-4o` | GPT-4o via Copilot |
+| `github_copilot/gpt-4o-mini` | GPT-4o Mini via Copilot |
+| `github_copilot/claude-sonnet-4-20250514` | Claude Sonnet via Copilot |
+| `github_copilot/o3-mini` | o3-mini via Copilot |
+
+You can also use **GitHub Models** (a separate service at [github.com/marketplace/models](https://github.com/marketplace/models)) with the `github/` prefix. This requires a GitHub personal access token set as `api_key` or via the `GITHUB_API_KEY` environment variable:
+
+```toml
+[llm]
+api_key = "ghp_..."
+model = "github/gpt-4o"
+```
 
 ## Usage
 
