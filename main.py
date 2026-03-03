@@ -1,5 +1,8 @@
+from arxiv_coffe.app import run
+
+
 def main():
-    print("Hello from arxiv-coffe!")
+    run()
 
 
 if __name__ == "__main__":

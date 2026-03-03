@@ -1,7 +1,24 @@
 [project]
 name = "arxiv-coffe"
 version = "0.1.0"
-description = "Add your description here"
+description = "A TUI tool to browse, filter, and summarize arXiv papers using AI"
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = []
+requires-python = ">=3.12"
+dependencies = [
+  "textual>=1.0.0",
+  "arxiv>=2.1.0",
+  "pymupdf>=1.24.0",
+  "litellm>=1.40.0",
+  "tomli-w>=1.0.0",
+  "httpx>=0.27.0",
+]
+
+[project.scripts]
+arxiv-coffe = "arxiv_coffe.app:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/arxiv_coffe"]
