@@ -66,7 +66,8 @@ cp config.toml.example ~/.config/arxiv-coffee/config.toml
 |---------|---------|-------------|
 | `llm.base_url` | *(empty)* | Custom API endpoint (e.g., for local models) |
 | `arxiv.categories` | `["hep-ph"]` | arXiv categories to fetch |
-| `arxiv.max_papers` | `50` | Max papers per fetch |
+| `arxiv.max_papers` | `100` | Max papers per fetch |
+| `arxiv.include_cross_posts` | `false` | Include papers cross-posted from other categories |
 | `paths.interests_file` | `~/.config/arxiv-coffee/interests.md` | Your research interests (used by AI filter) |
 | `paths.output_dir` | `~/arxiv-coffee-library` | Where summaries are saved |
 

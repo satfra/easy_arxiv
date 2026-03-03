@@ -9,6 +9,7 @@ from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Static, Button
 
 from arxiv_coffee.config import ensureConfigExists, loadConfig
+from arxiv_coffee.llm import _modelHandlesAuth
 from arxiv_coffee.models import AppConfig
 from arxiv_coffee.screens.feed import FeedScreen
 from arxiv_coffee.screens.library_screen import LibraryScreen
@@ -114,7 +115,9 @@ class ArxivCoffeApp(App):
         self.config, self.is_new_config = ensureConfigExists()
         self._updateHomeInfo()
 
-        if self.is_new_config or not self.config.api_key:
+        if self.is_new_config or (
+            not self.config.api_key and not _modelHandlesAuth(self.config.model)
+        ):
             self.notify(
                 "Welcome! Configure your API key and preferences in Settings.",
                 title="First Run",
@@ -134,7 +137,7 @@ class ArxivCoffeApp(App):
             )
 
             warning = self.query_one("#no-key-warning", Static)
-            if not self.config.api_key:
+            if not self.config.api_key and not _modelHandlesAuth(self.config.model):
                 warning.update("No API key set. Go to Settings to configure.")
             else:
                 warning.update("")

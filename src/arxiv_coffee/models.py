@@ -54,7 +54,8 @@ class AppConfig:
 
     # arXiv settings
     categories: list[str] = field(default_factory=lambda: ["hep-ph"])
-    max_papers: int = 50
+    max_papers: int = 100
+    include_cross_posts: bool = False
 
     # Paths
     interests_file: Path = field(

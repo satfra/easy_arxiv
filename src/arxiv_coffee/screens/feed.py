@@ -99,11 +99,12 @@ class FeedScreen(Screen):
   }
 
   .date-inputs {
-    display: none;
+    height: 0;
+    overflow: hidden;
   }
 
   .date-inputs.visible {
-    display: block;
+    height: auto;
   }
 
   .date-inputs Input {
@@ -206,6 +207,11 @@ class FeedScreen(Screen):
                 )
                 yield Label("Date range:")
                 yield Switch(value=False, id="date-toggle")
+                yield Label("Cross-posts:")
+                yield Switch(
+                    value=self.config.include_cross_posts,
+                    id="cross-posts-toggle",
+                )
                 yield Button("Fetch", variant="primary", id="fetch-btn")
                 yield Button("AI Filter", variant="warning", id="filter-btn")
                 yield Button("Summarize", variant="success", id="summarize-btn")
@@ -349,6 +355,7 @@ class FeedScreen(Screen):
             max_str = self.query_one("#max-input", Input).value
             max_papers = int(max_str) if max_str.isdigit() else self.config.max_papers
             use_dates = self.query_one("#date-toggle", Switch).value
+            include_cross = self.query_one("#cross-posts-toggle", Switch).value
 
             categories = [str(category)] if category else self.config.categories
 
@@ -393,12 +400,14 @@ class FeedScreen(Screen):
                     end,
                     categories=categories,
                     max_results=max_papers,
+                    include_cross_posts=include_cross,
                 )
             else:
                 self.papers = await fetchLatestPapers(
                     self.config,
                     categories=categories,
                     max_results=max_papers,
+                    include_cross_posts=include_cross,
                 )
 
             self.selected.clear()

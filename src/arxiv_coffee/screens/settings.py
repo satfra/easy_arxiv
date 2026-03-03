@@ -13,6 +13,7 @@ from textual.widgets import (
     Button,
     Input,
     Label,
+    Switch,
     TextArea,
 )
 
@@ -152,6 +153,18 @@ class SettingsScreen(Screen):
                         type="integer",
                     )
 
+                with Horizontal(classes="form-group"):
+                    yield Label("Include cross-posts", classes="form-label")
+                    yield Switch(
+                        value=self.config.include_cross_posts,
+                        id="include-cross-posts",
+                    )
+                yield Static(
+                    "Cross-posts are papers listed under a category but "
+                    "primarily belonging to another.",
+                    classes="form-hint",
+                )
+
                 yield Static("Paths", classes="section-title")
 
                 with Vertical(classes="form-group"):
@@ -231,8 +244,8 @@ class SettingsScreen(Screen):
             if max_papers < 1:
                 raise ValueError
         except ValueError:
-            warnings.append("Invalid max papers \u2014 defaulting to 50.")
-            max_papers = 50
+            warnings.append("Invalid max papers \u2014 defaulting to 100.")
+            max_papers = 100
 
         try:
             requests_per_minute = int(rpm_str) if rpm_str else 0
@@ -254,6 +267,8 @@ class SettingsScreen(Screen):
             )
         interests_file = Path(interests_str)
 
+        include_cross_posts = self.query_one("#include-cross-posts", Switch).value
+
         # --- Apply ---
         self.config.api_key = api_key
         self.config.model = model
@@ -261,6 +276,7 @@ class SettingsScreen(Screen):
         self.config.requests_per_minute = requests_per_minute
         self.config.categories = categories
         self.config.max_papers = max_papers
+        self.config.include_cross_posts = include_cross_posts
         self.config.output_dir = output_dir
         self.config.interests_file = interests_file
 

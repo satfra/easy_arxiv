@@ -31,7 +31,8 @@ def loadConfig(path: Path | None = None) -> AppConfig:
         base_url=llm.get("base_url", ""),
         requests_per_minute=llm.get("requests_per_minute", 0),
         categories=arxiv.get("categories", ["hep-ph"]),
-        max_papers=arxiv.get("max_papers", 50),
+        max_papers=arxiv.get("max_papers", 100),
+        include_cross_posts=arxiv.get("include_cross_posts", False),
         interests_file=Path(
             paths.get("interests_file", str(DEFAULT_CONFIG_DIR / "interests.md"))
         ),
@@ -56,6 +57,7 @@ def saveConfig(config: AppConfig, path: Path | None = None) -> Path:
         "arxiv": {
             "categories": config.categories,
             "max_papers": config.max_papers,
+            "include_cross_posts": config.include_cross_posts,
         },
         "paths": {
             "interests_file": str(config.interests_file),

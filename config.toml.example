@@ -27,7 +27,11 @@ model = "openai/gpt-4o"
 categories = ["hep-ph"]
 
 # Maximum number of papers to fetch per query
-max_papers = 50
+max_papers = 100
+
+# Include cross-posted papers (papers whose primary category differs from the
+# searched category). Set to true to include them, false to exclude.
+include_cross_posts = false
 
 [paths]
 # Path to a markdown file describing your research interests.
