@@ -39,6 +39,7 @@ class SettingsScreen(Screen):
   .settings-form {
     padding: 1 2;
     max-width: 100;
+    height: auto;
   }
 
   .form-group {
