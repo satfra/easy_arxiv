@@ -8,9 +8,9 @@ from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Static, Input, DataTable
 
-from arxiv_coffe.library import parseSummaryFile
-from arxiv_coffe.models import AppConfig
-from arxiv_coffe.screens.summary import SummaryScreen
+from arxiv_coffee.library import parseSummaryFile
+from arxiv_coffee.models import AppConfig
+from arxiv_coffee.screens.summary import SummaryScreen
 
 
 class LibraryScreen(Screen):

@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from arxiv_coffe.models import Paper, SummaryResult
+from arxiv_coffee.models import Paper, SummaryResult
 
 
 def _slugify(text: str, max_len: int = 60) -> str:
@@ -144,7 +144,7 @@ def updateLibraryIndex(output_dir: Path) -> Path:
         categories[cat].append(entry)
 
     # Sort categories alphabetically, entries by date descending
-    lines: list[str] = ["# arxiv-coffe Library\n"]
+    lines: list[str] = ["# arxiv-coffee Library\n"]
 
     for cat in sorted(categories.keys()):
         entries = sorted(categories[cat], key=lambda e: e["date"], reverse=True)

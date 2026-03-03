@@ -21,11 +21,11 @@ from textual.widgets import (
     ProgressBar,
 )
 
-from arxiv_coffe.arxiv_client import fetchLatestPapers, fetchPapersByDateRange
-from arxiv_coffe.llm import filterPapersByRelevance, summarizePaper
-from arxiv_coffe.library import addToLibrary
-from arxiv_coffe.models import AppConfig, Paper, SummaryResult
-from arxiv_coffe.pdf_extractor import downloadAndExtract
+from arxiv_coffee.arxiv_client import fetchLatestPapers, fetchPapersByDateRange
+from arxiv_coffee.llm import filterPapersByRelevance, summarizePaper
+from arxiv_coffee.library import addToLibrary
+from arxiv_coffee.models import AppConfig, Paper, SummaryResult
+from arxiv_coffee.pdf_extractor import downloadAndExtract
 
 
 # arXiv categories commonly used in HEP and related fields

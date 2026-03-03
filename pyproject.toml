@@ -1,5 +1,5 @@
 [project]
-name = "arxiv-coffe"
+name = "arxiv-coffee"
 version = "0.1.0"
 description = "A TUI tool to browse, filter, and summarize arXiv papers using AI"
 readme = "README.md"
@@ -14,11 +14,11 @@ dependencies = [
 ]
 
 [project.scripts]
-arxiv-coffe = "arxiv_coffe.app:run"
+arxiv-coffee = "arxiv_coffee.app:run"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/arxiv_coffe"]
+packages = ["src/arxiv_coffee"]

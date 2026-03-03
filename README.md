@@ -1,9 +1,9 @@
-# arxiv-coffe
+# arxiv-coffeee
 
 The scientific method: 1. Coffee. 2. Open arXiv. 3. Existential dread.
 This tool automates step 2, giving you more time for step 1 (and hopefully less of step 3).
 
-**arxiv-coffe** is a terminal UI application that fetches new papers from arXiv, uses AI to filter them by relevance to your research, and generates structured summaries of the ones you care about.
+**arxiv-coffeee** is a terminal UI application that fetches new papers from arXiv, uses AI to filter them by relevance to your research, and generates structured summaries of the ones you care about.
 
 ## Features
 
@@ -15,31 +15,42 @@ This tool automates step 2, giving you more time for step 1 (and hopefully less 
 
 ## Installation
 
-Requires Python 3.12+. Uses [uv](https://github.com/astral-sh/uv) for package management.
+Requires Python 3.12+.
 
 ```bash
 # Clone the repository
 git clone <repo-url>
 cd easy_arxiv
 
-# Install dependencies
-uv sync
+# Run (handles virtualenv + dependency installation automatically)
+./arxiv-coffeee
+```
 
-# Run
-uv run arxiv-coffe
-# or
-uv run python main.py
+The `arxiv-coffeee` launcher script will:
+1. Detect whether `uv` or `pip` is available
+2. Create a virtualenv and install all dependencies if needed
+3. Launch the TUI
+
+You can also manage the environment manually:
+
+```bash
+# With uv
+uv sync && uv run arxiv-coffeee
+
+# With pip
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e . && python main.py
 ```
 
 ## Configuration
 
-On first launch, arxiv-coffe creates a config file at `~/.config/arxiv-coffe/config.toml` and opens the Settings screen automatically.
+On first launch, arxiv-coffeee creates a config file at `~/.config/arxiv-coffee/config.toml` and opens the Settings screen automatically.
 
 You can also copy the example config:
 
 ```bash
-mkdir -p ~/.config/arxiv-coffe
-cp config.toml.example ~/.config/arxiv-coffe/config.toml
+mkdir -p ~/.config/arxiv-coffee
+cp config.toml.example ~/.config/arxiv-coffee/config.toml
 ```
 
 ### Required settings
@@ -56,8 +67,8 @@ cp config.toml.example ~/.config/arxiv-coffe/config.toml
 | `llm.base_url` | *(empty)* | Custom API endpoint (e.g., for local models) |
 | `arxiv.categories` | `["hep-ph"]` | arXiv categories to fetch |
 | `arxiv.max_papers` | `50` | Max papers per fetch |
-| `paths.interests_file` | `~/.config/arxiv-coffe/interests.md` | Your research interests (used by AI filter) |
-| `paths.output_dir` | `~/arxiv-coffe-library` | Where summaries are saved |
+| `paths.interests_file` | `~/.config/arxiv-coffee/interests.md` | Your research interests (used by AI filter) |
+| `paths.output_dir` | `~/arxiv-coffee-library` | Where summaries are saved |
 
 ### Interests file
 
@@ -98,7 +109,7 @@ Create a markdown file describing your research interests. The AI uses this to s
 ### Output structure
 
 ```
-~/arxiv-coffe-library/
+~/arxiv-coffee-library/
 ├── library.md              # Central index of all summaries
 ├── hep-ph/
 │   ├── 2026-03-03_susy-at-the-lhc.md

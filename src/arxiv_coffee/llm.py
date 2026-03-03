@@ -5,7 +5,7 @@ import logging
 
 import litellm
 
-from arxiv_coffe.models import AppConfig, Paper
+from arxiv_coffee.models import AppConfig, Paper
 
 logger = logging.getLogger(__name__)
 

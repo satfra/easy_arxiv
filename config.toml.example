@@ -1,5 +1,5 @@
-# arxiv-coffe configuration
-# Copy this file to ~/.config/arxiv-coffe/config.toml and edit as needed.
+# arxiv-coffee configuration
+# Copy this file to ~/.config/arxiv-coffee/config.toml and edit as needed.
 
 [llm]
 # API key for your LLM provider (required)
@@ -28,7 +28,7 @@ max_papers = 50
 [paths]
 # Path to a markdown file describing your research interests.
 # This is sent to the AI to help it filter relevant papers.
-interests_file = "~/.config/arxiv-coffe/interests.md"
+interests_file = "~/.config/arxiv-coffee/interests.md"
 
 # Directory where paper summaries and the library index are stored.
-output_dir = "~/arxiv-coffe-library"
+output_dir = "~/arxiv-coffee-library"

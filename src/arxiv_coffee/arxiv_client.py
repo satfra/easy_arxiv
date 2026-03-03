@@ -5,7 +5,7 @@ from datetime import datetime
 
 import arxiv
 
-from arxiv_coffe.models import AppConfig, Paper
+from arxiv_coffee.models import AppConfig, Paper
 
 
 def _resultToPaper(result: arxiv.Result) -> Paper:

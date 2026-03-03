@@ -1,4 +1,4 @@
-from arxiv_coffe.app import run
+from arxiv_coffee.app import run
 
 
 def main():

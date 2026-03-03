@@ -57,15 +57,17 @@ class AppConfig:
 
     # Paths
     interests_file: Path = field(
-        default_factory=lambda: Path.home() / ".config" / "arxiv-coffe" / "interests.md"
+        default_factory=lambda: (
+            Path.home() / ".config" / "arxiv-coffee" / "interests.md"
+        )
     )
     output_dir: Path = field(
-        default_factory=lambda: Path.home() / "arxiv-coffe-library"
+        default_factory=lambda: Path.home() / "arxiv-coffee-library"
     )
 
     @property
     def config_dir(self) -> Path:
-        return Path.home() / ".config" / "arxiv-coffe"
+        return Path.home() / ".config" / "arxiv-coffee"
 
     @property
     def config_path(self) -> Path:

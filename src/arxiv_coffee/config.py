@@ -5,9 +5,9 @@ from pathlib import Path
 
 import tomli_w
 
-from arxiv_coffe.models import AppConfig
+from arxiv_coffee.models import AppConfig
 
-DEFAULT_CONFIG_DIR = Path.home() / ".config" / "arxiv-coffe"
+DEFAULT_CONFIG_DIR = Path.home() / ".config" / "arxiv-coffee"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.toml"
 
 
@@ -35,7 +35,7 @@ def loadConfig(path: Path | None = None) -> AppConfig:
             paths.get("interests_file", str(DEFAULT_CONFIG_DIR / "interests.md"))
         ),
         output_dir=Path(
-            paths.get("output_dir", str(Path.home() / "arxiv-coffe-library"))
+            paths.get("output_dir", str(Path.home() / "arxiv-coffee-library"))
         ),
     )
 

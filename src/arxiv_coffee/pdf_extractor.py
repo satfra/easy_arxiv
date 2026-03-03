@@ -7,7 +7,7 @@ from pathlib import Path
 import fitz
 import httpx
 
-from arxiv_coffe.models import Paper
+from arxiv_coffee.models import Paper
 
 
 async def downloadPdf(paper: Paper, dest_dir: Path | None = None) -> Path:
@@ -19,7 +19,7 @@ async def downloadPdf(paper: Paper, dest_dir: Path | None = None) -> Path:
         raise ValueError(f"No PDF URL for paper {paper.arxiv_id}")
 
     if dest_dir is None:
-        dest_dir = Path(tempfile.mkdtemp(prefix="arxiv_coffe_"))
+        dest_dir = Path(tempfile.mkdtemp(prefix="arxiv_coffee_"))
     dest_dir.mkdir(parents=True, exist_ok=True)
 
     filename = f"{paper.short_id.replace('/', '_')}.pdf"

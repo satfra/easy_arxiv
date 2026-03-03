@@ -16,8 +16,8 @@ from textual.widgets import (
     TextArea,
 )
 
-from arxiv_coffe.config import saveConfig
-from arxiv_coffe.models import AppConfig
+from arxiv_coffee.config import saveConfig
+from arxiv_coffee.models import AppConfig
 
 
 class SettingsScreen(Screen):
@@ -227,7 +227,7 @@ class SettingsScreen(Screen):
         if not interests_str:
             warnings.append("Interests file path is empty \u2014 using default.")
             interests_str = str(
-                Path.home() / ".config" / "arxiv-coffe" / "interests.md"
+                Path.home() / ".config" / "arxiv-coffee" / "interests.md"
             )
         interests_file = Path(interests_str)
 

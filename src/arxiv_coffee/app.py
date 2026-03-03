@@ -6,18 +6,18 @@ from textual.binding import Binding
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Header, Footer, Static, Button
 
-from arxiv_coffe.config import ensureConfigExists, loadConfig
-from arxiv_coffe.models import AppConfig
-from arxiv_coffe.screens.feed import FeedScreen
-from arxiv_coffe.screens.library_screen import LibraryScreen
-from arxiv_coffe.screens.settings import SettingsScreen
+from arxiv_coffee.config import ensureConfigExists, loadConfig
+from arxiv_coffee.models import AppConfig
+from arxiv_coffee.screens.feed import FeedScreen
+from arxiv_coffee.screens.library_screen import LibraryScreen
+from arxiv_coffee.screens.settings import SettingsScreen
 
 
 LOGO = r"""
-   __ _ _ ____  _(_)_   __       ___ ___  / _| / _| ___
-  / _` | '__\ \/ / \ \ / /__    / __/ _ \| |_ | |_ / _ \
- | (_| | |   >  <| |\ V /___  | (_| (_) |  _||  _|  __/
-  \__,_|_|  /_/\_\_| \_/       \___\___/|_|  |_|  \___|
+   __ _ _ ____  _(_)_   __       ___ ___  / _| / _| ___  ___
+  / _` | '__\ \/ / \ \ / / __   / __/ _ \| |_ | |_ / _ \/ _ \
+ | (_| | |   >  <| |\ V / ____ | (_| (_) |  _||  _|  __/  __/
+  \__,_|_|  /_/\_\_| \_/ ______ \___\___/|_|  |_|  \___|\___|
 """
 
 
@@ -80,9 +80,9 @@ class HomeScreen(Vertical):
 
 
 class ArxivCoffeApp(App):
-    """Main TUI application for arxiv-coffe."""
+    """Main TUI application for arxiv-coffee."""
 
-    TITLE = "arxiv-coffe"
+    TITLE = "arxiv-coffee"
     SUB_TITLE = "arXiv paper browser & summarizer"
 
     BINDINGS = [
@@ -182,6 +182,10 @@ class ArxivCoffeApp(App):
 
 
 def run() -> None:
-    """Entry point for the arxiv-coffe TUI."""
+    """Entry point for the arxiv-coffee TUI."""
     app = ArxivCoffeApp()
     app.run()
+
+
+if __name__ == "__main__":
+    run()
