@@ -1,9 +1,9 @@
-# arxiv-coffeee
+# arxiv-coffee
 
 The scientific method: 1. Coffee. 2. Open arXiv. 3. Existential dread.
 This tool automates step 2, giving you more time for step 1 (and hopefully less of step 3).
 
-**arxiv-coffeee** is a terminal UI application that fetches new papers from arXiv, uses AI to filter them by relevance to your research, and generates structured summaries of the ones you care about.
+**arxiv-coffee** is a terminal UI application that fetches new papers from arXiv, uses AI to filter them by relevance to your research, and generates structured summaries of the ones you care about.
 
 ## Features
 
@@ -23,10 +23,10 @@ git clone <repo-url>
 cd easy_arxiv
 
 # Run (handles virtualenv + dependency installation automatically)
-./arxiv-coffeee
+./arxiv-coffee
 ```
 
-The `arxiv-coffeee` launcher script will:
+The `arxiv-coffee` launcher script will:
 1. Detect whether `uv` or `pip` is available
 2. Create a virtualenv and install all dependencies if needed
 3. Launch the TUI
@@ -35,7 +35,7 @@ You can also manage the environment manually:
 
 ```bash
 # With uv
-uv sync && uv run arxiv-coffeee
+uv sync && uv run arxiv-coffee
 
 # With pip
 python3 -m venv .venv && source .venv/bin/activate
@@ -44,7 +44,7 @@ pip install -e . && python main.py
 
 ## Configuration
 
-On first launch, arxiv-coffeee creates a config file at `~/.config/arxiv-coffee/config.toml` and opens the Settings screen automatically.
+On first launch, arxiv-coffee creates a config file at `~/.config/arxiv-coffee/config.toml` and opens the Settings screen automatically.
 
 You can also copy the example config:
 
@@ -55,21 +55,21 @@ cp config.toml.example ~/.config/arxiv-coffee/config.toml
 
 ### Required settings
 
-| Setting | Description | Example |
-|---------|-------------|---------|
-| `llm.api_key` | API key for your LLM provider | `sk-...` |
-| `llm.model` | Model in litellm format | `openai/gpt-4o`, `anthropic/claude-sonnet-4-20250514`, `github_copilot/gpt-4o` |
+| Setting       | Description                   | Example                                                                        |
+| ------------- | ----------------------------- | ------------------------------------------------------------------------------ |
+| `llm.api_key` | API key for your LLM provider | `sk-...`                                                                       |
+| `llm.model`   | Model in litellm format       | `openai/gpt-4o`, `anthropic/claude-sonnet-4-20250514`, `github_copilot/gpt-4o` |
 
 ### Optional settings
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `llm.base_url` | *(empty)* | Custom API endpoint (e.g., for local models) |
-| `arxiv.categories` | `["hep-ph"]` | arXiv categories to fetch |
-| `arxiv.max_papers` | `100` | Max papers per fetch |
-| `arxiv.include_cross_posts` | `false` | Include papers cross-posted from other categories |
-| `paths.interests_file` | `~/.config/arxiv-coffee/interests.md` | Your research interests (used by AI filter) |
-| `paths.output_dir` | `~/arxiv-coffee-library` | Where summaries are saved |
+| Setting                     | Default                               | Description                                       |
+| --------------------------- | ------------------------------------- | ------------------------------------------------- |
+| `llm.base_url`              | *(empty)*                             | Custom API endpoint (e.g., for local models)      |
+| `arxiv.categories`          | `["hep-ph"]`                          | arXiv categories to fetch                         |
+| `arxiv.max_papers`          | `100`                                 | Max papers per fetch                              |
+| `arxiv.include_cross_posts` | `false`                               | Include papers cross-posted from other categories |
+| `paths.interests_file`      | `~/.config/arxiv-coffee/interests.md` | Your research interests (used by AI filter)       |
+| `paths.output_dir`          | `~/arxiv-coffee-library`              | Where summaries are saved                         |
 
 ### Interests file
 
@@ -93,12 +93,12 @@ model = "github_copilot/gpt-4o"
 
 Available models depend on your Copilot plan. Common options:
 
-| Model string | Description |
-|---|---|
-| `github_copilot/gpt-4o` | GPT-4o via Copilot |
-| `github_copilot/gpt-4o-mini` | GPT-4o Mini via Copilot |
+| Model string                              | Description               |
+| ----------------------------------------- | ------------------------- |
+| `github_copilot/gpt-4o`                   | GPT-4o via Copilot        |
+| `github_copilot/gpt-4o-mini`              | GPT-4o Mini via Copilot   |
 | `github_copilot/claude-sonnet-4-20250514` | Claude Sonnet via Copilot |
-| `github_copilot/o3-mini` | o3-mini via Copilot |
+| `github_copilot/o3-mini`                  | o3-mini via Copilot       |
 
 You can also use **GitHub Models** (a separate service at [github.com/marketplace/models](https://github.com/marketplace/models)) with the `github/` prefix. This requires a GitHub personal access token set as `api_key` or via the `GITHUB_API_KEY` environment variable:
 
@@ -112,24 +112,24 @@ model = "github/gpt-4o"
 
 ### Keyboard shortcuts
 
-| Key | Action |
-|-----|--------|
+| Key | Action                          |
+| --- | ------------------------------- |
 | `f` | Open Feed screen / Fetch papers |
-| `l` | Open Library screen |
-| `s` | Open Settings screen |
-| `q` | Quit |
+| `l` | Open Library screen             |
+| `s` | Open Settings screen            |
+| `q` | Quit                            |
 
 ### Feed screen
 
-| Key | Action |
-|-----|--------|
-| `f` | Fetch papers from arXiv |
-| `a` | Run AI relevance filtering |
-| `Space` | Toggle paper selection |
-| `Ctrl+A` | Select/deselect all |
-| `s` | Summarize selected papers |
-| `d` | Toggle detail panel |
-| `Escape` | Go back |
+| Key      | Action                     |
+| -------- | -------------------------- |
+| `f`      | Fetch papers from arXiv    |
+| `a`      | Run AI relevance filtering |
+| `Space`  | Toggle paper selection     |
+| `Ctrl+A` | Select/deselect all        |
+| `s`      | Summarize selected papers  |
+| `d`      | Toggle detail panel        |
+| `Escape` | Go back                    |
 
 ### Workflow
 
