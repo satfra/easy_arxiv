@@ -5,7 +5,9 @@ from pathlib import Path
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Markdown
+from textual.widgets import Header, Footer, Static
+
+from arxiv_coffee.markdown import MathMarkdown
 
 
 class SummaryScreen(Screen):
@@ -42,7 +44,7 @@ class SummaryScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         with VerticalScroll(id="summary-scroll"):
-            yield Markdown("", id="summary-content")
+            yield MathMarkdown("", id="summary-content")
         yield Static(str(self.file_path), id="summary-path")
         yield Footer()
 
@@ -51,4 +53,4 @@ class SummaryScreen(Screen):
             content = self.file_path.read_text(encoding="utf-8")
         except OSError as e:
             content = f"**Error:** Could not read file: {e}"
-        self.query_one("#summary-content", Markdown).update(content)
+        self.query_one("#summary-content", MathMarkdown).update(content)

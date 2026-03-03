@@ -17,13 +17,13 @@ from textual.widgets import (
     Select,
     Switch,
     LoadingIndicator,
-    Markdown,
     ProgressBar,
 )
 
 from arxiv_coffee.arxiv_client import fetchLatestPapers, fetchPapersByDateRange
 from arxiv_coffee.llm import createRateLimiter, filterPapersByRelevance, summarizePaper
 from arxiv_coffee.library import addToLibrary
+from arxiv_coffee.markdown import MathMarkdown
 from arxiv_coffee.models import AppConfig, Paper, SummaryResult
 from arxiv_coffee.pdf_extractor import downloadAndExtract
 
@@ -228,7 +228,7 @@ class FeedScreen(Screen):
         with VerticalScroll(id="detail-panel"):
             yield Static("", id="detail-title")
             yield Static("", id="detail-meta")
-            yield Markdown("", id="detail-abstract")
+            yield MathMarkdown("", id="detail-abstract")
 
         yield Static(
             "Ready. Press [bold]f[/] to fetch, [bold]space[/] to select, "
@@ -651,7 +651,7 @@ class FeedScreen(Screen):
             meta += f"\n[italic]{paper.relevance_reason}[/italic]"
         self.query_one("#detail-meta", Static).update(meta)
 
-        self.query_one("#detail-abstract", Markdown).update(
+        self.query_one("#detail-abstract", MathMarkdown).update(
             f"**Abstract:** {paper.abstract}"
         )
 

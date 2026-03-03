@@ -161,9 +161,12 @@ dependencies = [
     { name = "arxiv" },
     { name = "httpx" },
     { name = "litellm" },
+    { name = "mdit-py-plugins" },
+    { name = "pylatexenc" },
     { name = "pymupdf" },
     { name = "textual" },
     { name = "tomli-w" },
+    { name = "unicodeit" },
 ]
 
 [package.dev-dependencies]
@@ -176,9 +179,12 @@ requires-dist = [
     { name = "arxiv", specifier = ">=2.1.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "litellm", specifier = ">=1.40.0" },
+    { name = "mdit-py-plugins", specifier = ">=0.4.0" },
+    { name = "pylatexenc", specifier = ">=2.10" },
     { name = "pymupdf", specifier = ">=1.24.0" },
     { name = "textual", specifier = ">=1.0.0" },
     { name = "tomli-w", specifier = ">=1.0.0" },
+    { name = "unicodeit", specifier = ">=0.7.5" },
 ]
 
 [package.metadata.requires-dev]
@@ -1118,6 +1124,12 @@ wheels = [
 ]
 
 [[package]]
+name = "pylatexenc"
+version = "2.10"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/ab/34ec41718af73c00119d0351b7a2531d2ebddb51833a36448fc7b862be60/pylatexenc-2.10.tar.gz", hash = "sha256:3dd8fd84eb46dc30bee1e23eaab8d8fb5a7f507347b23e5f38ad9675c84f40d3", size = 162597, upload-time = "2021-04-06T07:56:07.854Z" }
+
+[[package]]
 name = "pymupdf"
 version = "1.27.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1602,6 +1614,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/78/67/9a363818028526e2d
 wheels = [
     { url = "https://files.pythonhosted.org/packages/61/73/d21edf5b204d1467e06500080a50f79d49ef2b997c79123a536d4a17d97c/uc_micro_py-2.0.0-py3-none-any.whl", hash = "sha256:3603a3859af53e5a39bc7677713c78ea6589ff188d70f4fee165db88e22b242c", size = 6383, upload-time = "2026-03-01T06:31:26.257Z" },
 ]
+
+[[package]]
+name = "unicodeit"
+version = "0.7.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/59/87694efec0dd8d789776b54a4b928b85d3886ff43ece762b67faa4fbdde5/unicodeit-0.7.5.tar.gz", hash = "sha256:f100df7a1b8c64d7b5160859426b641cd9f30218173c5a3450842370e242a168", size = 40956, upload-time = "2023-03-12T09:23:51.151Z" }
 
 [[package]]
 name = "urllib3"
