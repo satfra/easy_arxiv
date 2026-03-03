@@ -8,9 +8,12 @@ import arxiv
 
 from arxiv_coffee.models import AppConfig, Paper
 
-# arXiv daily submission cutoff: 14:00 US Eastern on weekdays.
+# arXiv announces new papers at ~20:00 US Eastern on weekdays.
+# Submissions close at 14:00 ET, but the batch is not visible on arXiv
+# until the 20:00 announcement.  We use the announcement hour so the
+# window only advances once papers are actually available.
 _ARXIV_TZ = ZoneInfo("US/Eastern")
-_CUTOFF_HOUR = 14
+_CUTOFF_HOUR = 20
 
 
 def _resultToPaper(result: arxiv.Result) -> Paper:
@@ -50,10 +53,11 @@ def _latestAnnouncementWindow() -> tuple[datetime, datetime]:
     announcement window.
 
     arXiv accepts submissions continuously but announces new papers once
-    per weekday.  The daily cutoff is 14:00 US/Eastern; papers submitted
-    between two consecutive cutoffs form one announcement batch.
+    per weekday.  Submissions close at 14:00 US/Eastern, but the batch
+    is published at ~20:00 ET.  We use 20:00 as the effective cutoff so
+    the window only advances once papers are actually visible.
 
-    On Monday the window covers Friday 14:00 ET -> Monday 14:00 ET
+    On Monday the window covers Friday 20:00 ET -> Monday 20:00 ET
     (weekend submissions are batched together).
     """
     now_et = datetime.now(_ARXIV_TZ)
@@ -95,7 +99,7 @@ async def fetchLatestPapers(
     """Fetch papers from the most recent arXiv announcement window.
 
     Only papers whose submission timestamp falls within the latest
-    announcement window (between two consecutive weekday 14:00 ET
+    announcement window (between two consecutive weekday 20:00 ET
     cutoffs) are returned.  This matches the papers shown on the arXiv
     ``/list/<category>/new`` page.
 
