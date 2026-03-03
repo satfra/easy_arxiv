@@ -1,16 +1,45 @@
 from __future__ import annotations
 
+import shutil
+import subprocess
+import sys
 from pathlib import Path
+from urllib.parse import quote
 
 from textual import on
 from textual.app import ComposeResult
-from textual.containers import Vertical
+from textual.containers import Horizontal
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, DataTable
+from textual.widgets import Header, Footer, Static, Input, Button, DataTable
 
 from arxiv_coffee.library import parseSummaryFile
 from arxiv_coffee.models import AppConfig
 from arxiv_coffee.screens.summary import SummaryScreen
+
+# Markdown logo (simplified M-down-arrow glyph) used as the button label.
+_OBSIDIAN_LABEL = "\u24c2 Obsidian"
+
+
+def _isObsidianInstalled() -> bool:
+    """Return True if Obsidian appears to be installed."""
+    if shutil.which("obsidian"):
+        return True
+    if sys.platform == "darwin":
+        return Path("/Applications/Obsidian.app").exists()
+    return False
+
+
+def _openInObsidian(vault_path: Path) -> None:
+    """Open a directory as an Obsidian vault via the obsidian:// URI scheme."""
+    uri = f"obsidian://open?path={quote(str(vault_path.resolve()), safe='')}"
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", uri])
+    elif sys.platform == "win32":
+        import os
+
+        os.startfile(uri)  # type: ignore[attr-defined]  # noqa: S606
+    else:
+        subprocess.Popen(["xdg-open", uri])
 
 
 class LibraryScreen(Screen):
@@ -35,6 +64,10 @@ class LibraryScreen(Screen):
 
   #search-bar Input {
     width: 1fr;
+  }
+
+  #search-bar Button {
+    margin: 0 0 0 1;
   }
 
   #lib-table {
@@ -63,11 +96,13 @@ class LibraryScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
 
-        with Vertical(id="search-bar"):
+        with Horizontal(id="search-bar"):
             yield Input(
                 placeholder="Search by title, category, or arXiv ID...",
                 id="search-input",
             )
+            if _isObsidianInstalled():
+                yield Button(_OBSIDIAN_LABEL, variant="default", id="obsidian-btn")
 
         table = DataTable(id="lib-table", cursor_type="row")
         table.add_columns("Date", "Category", "arXiv", "Title")
@@ -152,3 +187,16 @@ class LibraryScreen(Screen):
             self.app.push_screen(SummaryScreen(file_path))
         else:
             self.notify(f"File not found: {file_path}", severity="error")
+
+    @on(Button.Pressed, "#obsidian-btn")
+    def onObsidianOpen(self) -> None:
+        """Open the library output directory in Obsidian."""
+        output_dir = self.config.output_dir
+        if not output_dir.exists():
+            self.notify("Output directory does not exist yet.", severity="warning")
+            return
+        try:
+            _openInObsidian(output_dir)
+            self.notify("Opening library in Obsidian...")
+        except OSError as exc:
+            self.notify(f"Failed to open Obsidian: {exc}", severity="error")
