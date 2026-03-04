@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 
 from textual import on, work
@@ -508,7 +509,7 @@ class FeedScreen(Screen):
 
     @work(thread=False)
     async def _doSummarize(self) -> None:
-        """Download, extract, and summarize selected papers."""
+        """Download, extract, and summarize selected papers concurrently."""
         if not self.selected:
             self.notify(
                 "No papers selected. Use Space to toggle selection.",
@@ -523,57 +524,50 @@ class FeedScreen(Screen):
         total = len(papers_to_summarize)
 
         self._setBusy(True)
-        self._showProgress(True, total)
-        success = 0
-        errors = 0
+        self._setStatus(f"Summarizing {total} paper(s)...")
         limiter = createRateLimiter(self.config)
+        library_lock = asyncio.Lock()
+        completed = 0
 
-        for i, paper in enumerate(papers_to_summarize, 1):
-            self._updateProgress(
-                i - 1,
-                total,
-                f"[{i}/{total}] Downloading: {paper.title[:50]}...",
-            )
-
+        async def _processPaper(paper: Paper) -> bool:
+            """Download, summarize, and save a single paper."""
+            nonlocal completed
             try:
-                # Download and extract PDF text
                 full_text = await downloadAndExtract(paper)
 
-                self._updateProgress(
-                    i - 0.5,
-                    total,
-                    f"[{i}/{total}] Summarizing: {paper.title[:50]}...",
-                )
-
-                # Summarize with LLM
                 summary_text = await summarizePaper(
                     paper, full_text, self.config, limiter=limiter
                 )
 
-                # Write to library
                 result = SummaryResult(
                     paper=paper,
                     summary_text=summary_text,
                     generated_at=datetime.now(timezone.utc),
                     model_used=self.config.model,
                 )
-                addToLibrary(result, self.config.output_dir)
-                success += 1
+                async with library_lock:
+                    addToLibrary(result, self.config.output_dir)
 
+                completed += 1
                 self.notify(
                     f"Summarized: {paper.title[:60]}",
-                    title=f"Done [{i}/{total}]",
+                    title=f"Done [{completed}/{total}]",
                 )
+                return True
 
             except Exception as e:
-                errors += 1
+                completed += 1
                 self.notify(
                     f"{paper.short_id}: {e}",
                     severity="error",
-                    title=f"Error [{i}/{total}]",
+                    title=f"Error [{completed}/{total}]",
                 )
+                return False
 
-        self._showProgress(False, 0)
+        results = await asyncio.gather(*(_processPaper(p) for p in papers_to_summarize))
+
+        success = sum(results)
+        errors = total - success
         self._setBusy(False)
 
         summary = f"Completed: {success} summarized"
