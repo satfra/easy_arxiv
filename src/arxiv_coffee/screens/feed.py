@@ -28,6 +28,7 @@ from arxiv_coffee.library import addToLibrary
 from arxiv_coffee.markdown import MathMarkdown
 from arxiv_coffee.models import AppConfig, Paper, SummaryResult
 from arxiv_coffee.pdf_extractor import downloadAndExtract
+from arxiv_coffee.widgets import DualProgressBar
 
 
 # arXiv categories commonly used in HEP and related fields
@@ -177,6 +178,21 @@ class FeedScreen(Screen):
   #progress-bar {
     height: 1;
   }
+
+  #summarize-progress {
+    height: auto;
+    padding: 0 1;
+    display: none;
+  }
+
+  #summarize-progress.visible {
+    display: block;
+  }
+
+  #summarize-label {
+    color: $text-muted;
+    height: 1;
+  }
   """
 
     def __init__(self, config: AppConfig) -> None:
@@ -228,6 +244,10 @@ class FeedScreen(Screen):
         with Vertical(id="progress-container"):
             yield Static("", id="progress-label")
             yield ProgressBar(total=100, show_eta=False, id="progress-bar")
+
+        with Vertical(id="summarize-progress"):
+            yield Static("", id="summarize-label")
+            yield DualProgressBar(id="summarize-bar")
 
         table = DataTable(id="paper-table", cursor_type="row")
         table.add_columns("Sel", "Score", "Title", "Authors", "Date", "Categories")
@@ -525,16 +545,53 @@ class FeedScreen(Screen):
 
         self._setBusy(True)
         self._setStatus(f"Summarizing {total} paper(s)...")
+
+        # Show the dual-segment progress bar.
+        container = self.query_one("#summarize-progress")
+        bar = self.query_one("#summarize-bar", DualProgressBar)
+        label = self.query_one("#summarize-label", Static)
+        bar.updateCounts(downloading=0, summarizing=0, done=0, total=total)
+        label.update(f"Starting summarization of {total} paper(s)...")
+        container.add_class("visible")
+
         limiter = createRateLimiter(self.config)
         library_lock = asyncio.Lock()
-        completed = 0
+        downloading = 0
+        summarizing = 0
+        done = 0
+
+        def _refreshBar() -> None:
+            """Push current counters to the bar widget and label."""
+            bar.updateCounts(
+                downloading=downloading,
+                summarizing=summarizing,
+                done=done,
+                total=total,
+            )
+            parts: list[str] = []
+            if downloading:
+                parts.append(f"Downloading: {downloading}")
+            if summarizing:
+                parts.append(f"Summarizing: {summarizing}")
+            parts.append(f"Done: {done}/{total}")
+            label.update(" | ".join(parts))
 
         async def _processPaper(paper: Paper) -> bool:
             """Download, summarize, and save a single paper."""
-            nonlocal completed
+            nonlocal downloading, summarizing, done
+            phase = "pending"
             try:
+                # -- Download phase --
+                phase = "downloading"
+                downloading += 1
+                _refreshBar()
                 full_text = await downloadAndExtract(paper)
 
+                # -- Summarize phase --
+                phase = "summarizing"
+                downloading -= 1
+                summarizing += 1
+                _refreshBar()
                 summary_text = await summarizePaper(
                     paper, full_text, self.config, limiter=limiter
                 )
@@ -548,32 +605,34 @@ class FeedScreen(Screen):
                 async with library_lock:
                     addToLibrary(result, self.config.output_dir)
 
-                completed += 1
-                self.notify(
-                    f"Summarized: {paper.title[:60]}",
-                    title=f"Done [{completed}/{total}]",
-                )
+                # -- Done --
+                summarizing -= 1
+                done += 1
+                _refreshBar()
                 return True
 
-            except Exception as e:
-                completed += 1
-                self.notify(
-                    f"{paper.short_id}: {e}",
-                    severity="error",
-                    title=f"Error [{completed}/{total}]",
-                )
+            except Exception:
+                # Undo whichever phase this paper was in.
+                if phase == "downloading":
+                    downloading -= 1
+                elif phase == "summarizing":
+                    summarizing -= 1
+                done += 1
+                _refreshBar()
                 return False
 
         results = await asyncio.gather(*(_processPaper(p) for p in papers_to_summarize))
 
         success = sum(results)
         errors = total - success
-        self._setBusy(False)
 
         summary = f"Completed: {success} summarized"
         if errors:
             summary += f", {errors} failed"
         summary += f". Output: {self.config.output_dir}"
+
+        label.update(summary)
+        self._setBusy(False)
         self._setStatus(summary)
         self.notify(summary, title="Summarization Complete")
 
