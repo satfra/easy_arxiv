@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Suppress litellm's noisy logging
 litellm.suppress_debug_info = True
+litellm.drop_params = True
 
 # ---------------------------------------------------------------------------
 # System prompts
