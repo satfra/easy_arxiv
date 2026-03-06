@@ -166,6 +166,7 @@ dependencies = [
     { name = "pymupdf" },
     { name = "textual" },
     { name = "tomli-w" },
+    { name = "typer" },
     { name = "unicodeit" },
 ]
 
@@ -192,6 +193,7 @@ requires-dist = [
     { name = "textual", specifier = ">=1.0.0" },
     { name = "textual-image", marker = "extra == 'graphics'", specifier = ">=0.8.5" },
     { name = "tomli-w", specifier = ">=1.0.0" },
+    { name = "typer", specifier = ">=0.9.0" },
     { name = "unicodeit", specifier = ">=0.7.5" },
 ]
 provides-extras = ["graphics"]

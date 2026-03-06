@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+import sys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import IO
 
 
 @dataclass
@@ -29,6 +32,74 @@ class Paper:
     def url(self) -> str:
         """Return the abstract page URL."""
         return f"https://arxiv.org/abs/{self.short_id}"
+
+    def toDict(self) -> dict:
+        """Serialize to a plain dict suitable for JSON output.
+
+        The ``published`` datetime is converted to an ISO 8601 string so
+        the result can be passed directly to ``json.dumps``.
+        """
+        return {
+            "arxiv_id": self.arxiv_id,
+            "title": self.title,
+            "authors": self.authors,
+            "abstract": self.abstract,
+            "categories": self.categories,
+            "published": self.published.isoformat(),
+            "pdf_url": self.pdf_url,
+            "primary_category": self.primary_category,
+            "relevance_score": self.relevance_score,
+            "relevance_reason": self.relevance_reason,
+        }
+
+    @classmethod
+    def fromDict(cls, data: dict) -> Paper:
+        """Reconstruct a Paper from a dict (e.g. parsed from JSON).
+
+        Handles the ISO 8601 ``published`` string and missing optional
+        fields gracefully.
+        """
+        published_raw = data["published"]
+        if isinstance(published_raw, str):
+            published = datetime.fromisoformat(published_raw)
+        else:
+            published = published_raw
+        # Ensure timezone-aware
+        if published.tzinfo is None:
+            published = published.replace(tzinfo=timezone.utc)
+
+        return cls(
+            arxiv_id=data["arxiv_id"],
+            title=data["title"],
+            authors=data["authors"],
+            abstract=data["abstract"],
+            categories=data["categories"],
+            published=published,
+            pdf_url=data["pdf_url"],
+            primary_category=data.get("primary_category", ""),
+            relevance_score=data.get("relevance_score"),
+            relevance_reason=data.get("relevance_reason"),
+        )
+
+
+def writePapersJsonl(papers: list[Paper], file: IO[str] | None = None) -> None:
+    """Write papers as JSON Lines to a file object (default: stdout)."""
+    out = file or sys.stdout
+    for paper in papers:
+        out.write(json.dumps(paper.toDict(), ensure_ascii=False) + "\n")
+    out.flush()
+
+
+def readPapersJsonl(file: IO[str] | None = None) -> list[Paper]:
+    """Read papers from JSON Lines on a file object (default: stdin)."""
+    src = file or sys.stdin
+    papers: list[Paper] = []
+    for line in src:
+        line = line.strip()
+        if not line:
+            continue
+        papers.append(Paper.fromDict(json.loads(line)))
+    return papers
 
 
 @dataclass

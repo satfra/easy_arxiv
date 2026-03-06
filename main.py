@@ -1,8 +1,8 @@
-from arxiv_coffee.app import run
+from arxiv_coffee.cli import runCli
 
 
 def main():
-    run()
+    runCli()
 
 
 if __name__ == "__main__":
