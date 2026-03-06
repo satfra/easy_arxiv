@@ -19,7 +19,7 @@ def _slugify(text: str, max_len: int = 60) -> str:
     return text[:max_len].rstrip("-")
 
 
-def _buildSummaryPath(result: SummaryResult, output_dir: Path) -> Path:
+def buildSummaryPath(result: SummaryResult, output_dir: Path) -> Path:
     """Determine the output path for a paper summary file.
 
     Format: {output_dir}/{primary_category}/{YYYY-MM-DD}_{slug}.md
@@ -37,7 +37,7 @@ def writeSummaryFile(result: SummaryResult, output_dir: Path) -> Path:
     Creates the category subdirectory if needed. Returns the path to the
     written file and updates result.output_path.
     """
-    path = _buildSummaryPath(result, output_dir)
+    path = buildSummaryPath(result, output_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
 
     authors_str = ", ".join(result.paper.authors)

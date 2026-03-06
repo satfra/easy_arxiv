@@ -342,6 +342,125 @@ def summarize(
 
 
 # -------------------------------------------------------------------
+# Subcommand: export
+# -------------------------------------------------------------------
+
+
+@app.command()
+def export(
+    output_dir: Path | None = typer.Option(
+        None,
+        "--output-dir",
+        "-o",
+        help="Override the output directory from config.",
+    ),
+    open_browser: bool = typer.Option(
+        False,
+        "--open",
+        help="Open the exported HTML in the default browser when done.",
+    ),
+    digest: bool = typer.Option(
+        False,
+        "--digest",
+        help="Combine all summaries into a single digest HTML page.",
+    ),
+    digest_title: str = typer.Option(
+        "",
+        "--digest-title",
+        help="Title for the digest page. Defaults to 'arxiv-coffee digest YYYY-MM-DD'.",
+    ),
+    config_path: Path | None = ConfigOption,
+) -> None:
+    """Read papers from stdin and export their summaries as self-contained HTML.
+
+    Converts the markdown summary files produced by 'summarize' into HTML
+    with pre-rendered LaTeX math (no JavaScript required). The HTML files
+    are suitable for browser viewing or attaching to emails.
+
+    With --digest, all summaries are combined into a single HTML page.
+    With --open, the result is opened in the default browser immediately.
+
+    Papers are passed through to stdout as JSON Lines so the pipeline
+    can continue.
+
+    Example:
+        arxiv-coffee feed | arxiv-coffee rate | arxiv-coffee summarize | arxiv-coffee export --open
+    """
+    import webbrowser
+    from datetime import date
+
+    from arxiv_coffee.html_export import buildDigestHtml, exportSummaryToHtml
+    from arxiv_coffee.library import buildSummaryPath
+    from arxiv_coffee.models import SummaryResult
+
+    if sys.stdin.isatty():
+        _err("Error: No input. Pipe papers from 'arxiv-coffee summarize'.")
+        _err(
+            "Example: arxiv-coffee feed | arxiv-coffee rate"
+            " | arxiv-coffee summarize | arxiv-coffee export"
+        )
+        raise typer.Exit(1)
+
+    config = _loadAppConfig(config_path)
+    if output_dir:
+        config.output_dir = output_dir
+
+    papers = readPapersJsonl()
+    if not papers:
+        _err("No papers on stdin.")
+        raise typer.Exit(0)
+
+    _err(f"Exporting {len(papers)} paper summaries to HTML...")
+
+    exported: list[Path] = []
+    for paper in papers:
+        # Build a dummy SummaryResult to reuse the path logic
+        dummy = SummaryResult(
+            paper=paper,
+            summary_text="",
+            generated_at=paper.published,
+            model_used="",
+        )
+        md_path = buildSummaryPath(dummy, config.output_dir)
+        if not md_path.exists():
+            _err(f"  Warning: summary not found for {paper.short_id}, skipping")
+            continue
+        try:
+            html_path = exportSummaryToHtml(md_path)
+            exported.append(html_path)
+            _err(f"  {paper.short_id} -> {html_path}")
+        except Exception as exc:
+            _err(f"  Error exporting {paper.short_id}: {exc}")
+
+    if not exported:
+        _err("No summaries exported.")
+        raise typer.Exit(1)
+
+    # Build digest if requested
+    digest_path: Path | None = None
+    if digest:
+        today = date.today().isoformat()
+        title = digest_title or f"arxiv-coffee digest {today}"
+        digest_html = buildDigestHtml(
+            [p.with_suffix(".md") for p in exported],
+            title,
+        )
+        digest_path = config.output_dir / f"digest_{today}.html"
+        digest_path.write_text(digest_html, encoding="utf-8")
+        _err(f"Digest written to {digest_path}")
+
+    # Open in browser if requested
+    if open_browser:
+        target = digest_path if digest_path else exported[-1]
+        webbrowser.open(target.as_uri())
+
+    _err(f"Exported {len(exported)} summaries.")
+
+    # Pass papers through so the pipeline can continue
+    writePapersJsonl(papers)
+
+
+# -------------------------------------------------------------------
 # Entry point
 # -------------------------------------------------------------------
 

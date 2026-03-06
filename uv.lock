@@ -161,6 +161,7 @@ dependencies = [
     { name = "arxiv" },
     { name = "httpx" },
     { name = "litellm" },
+    { name = "matplotlib" },
     { name = "mdit-py-plugins" },
     { name = "pylatexenc" },
     { name = "pymupdf" },
@@ -172,7 +173,6 @@ dependencies = [
 
 [package.optional-dependencies]
 graphics = [
-    { name = "matplotlib" },
     { name = "textual-image" },
 ]
 
@@ -186,7 +186,7 @@ requires-dist = [
     { name = "arxiv", specifier = ">=2.1.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "litellm", specifier = ">=1.40.0" },
-    { name = "matplotlib", marker = "extra == 'graphics'", specifier = ">=3.8.0" },
+    { name = "matplotlib", specifier = ">=3.8.0" },
     { name = "mdit-py-plugins", specifier = ">=0.4.0" },
     { name = "pylatexenc", specifier = ">=2.10" },
     { name = "pymupdf", specifier = ">=1.24.0" },

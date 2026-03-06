@@ -11,6 +11,7 @@ This tool automates step 2, giving you more time for step 1 (and hopefully less 
 - **AI relevance filtering** — send paper titles and abstracts to an LLM alongside your research interests; papers get scored 0-10 and sorted
 - **PDF summarization** — download full PDFs, extract text, and generate concise but exhaustive markdown summaries via AI
 - **Library management** — summaries are written to organized markdown files with a central `library.md` index
+- **HTML export** — convert summaries to self-contained HTML with pre-rendered LaTeX math, suitable for browser viewing or emailing
 - **Multi-provider LLM support** — uses [litellm](https://github.com/BerriAI/litellm) so you can plug in OpenAI, Anthropic, local models, or any provider litellm supports
 - **Unix-pipe CLI** — compose the pipeline stages freely on the command line
 
@@ -186,6 +187,27 @@ uv run main.py feed | uv run main.py rate | uv run main.py summarize
 uv run main.py feed | uv run main.py rate | uv run main.py summarize --output-dir ~/papers/2026-03
 ```
 
+#### `export` — convert summaries to HTML
+
+Reads papers from stdin, finds their corresponding markdown summary files in the library, and converts each one to a self-contained HTML file with pre-rendered LaTeX math (PNG images embedded inline — no JavaScript, no CDN). The HTML files are suitable for opening in a browser or attaching to an email. The same papers are written to stdout so the pipeline can continue.
+
+```bash
+# Export summaries and open the last one in the browser
+uv run main.py feed | uv run main.py rate | uv run main.py summarize | uv run main.py export --open
+
+# Combine all exported summaries into a single digest page
+uv run main.py feed | uv run main.py rate | uv run main.py summarize | uv run main.py export --digest --open
+
+# Custom digest title
+uv run main.py feed -C hep-ph | uv run main.py rate | uv run main.py summarize \
+  | uv run main.py export --digest --digest-title "hep-ph digest 2026-03-06" --open
+
+# Write HTML files to a different directory
+uv run main.py feed | uv run main.py rate | uv run main.py summarize | uv run main.py export --output-dir ~/exports
+```
+
+HTML files are written alongside the corresponding markdown files, with the same base name and a `.html` extension. In `--digest` mode a `digest_YYYY-MM-DD.html` file is also written to the root of the output directory.
+
 #### Common options
 
 All subcommands accept:
@@ -198,8 +220,8 @@ All subcommands accept:
 #### Full pipeline example
 
 ```bash
-# Fetch today's hep-ph papers, keep only highly relevant ones, summarize them
-uv run main.py feed -C hep-ph | uv run main.py rate --min-score 7 | uv run main.py summarize
+# Fetch today's hep-ph papers, keep only highly relevant ones, summarize and export to HTML
+uv run main.py feed -C hep-ph | uv run main.py rate --min-score 7 | uv run main.py summarize | uv run main.py export --digest --open
 ```
 
 #### Using with jq
@@ -221,12 +243,16 @@ cat rated.jsonl | uv run main.py summarize
 
 ```
 ~/arxiv-coffee-library/
-├── library.md              # Central index of all summaries
+├── library.md                          # Central index of all summaries
+├── digest_2026-03-06.html              # Combined digest (from export --digest)
 ├── hep-ph/
 │   ├── 2026-03-03_susy-at-the-lhc.md
-│   └── 2026-03-03_dark-matter-searches.md
+│   ├── 2026-03-03_susy-at-the-lhc.html
+│   ├── 2026-03-03_dark-matter-searches.md
+│   └── 2026-03-03_dark-matter-searches.html
 └── hep-th/
-    └── 2026-03-02_string-landscape.md
+    ├── 2026-03-02_string-landscape.md
+    └── 2026-03-02_string-landscape.html
 ```
 
 ## Dependencies
@@ -236,8 +262,15 @@ cat rated.jsonl | uv run main.py summarize
 - [pymupdf](https://github.com/pymupdf/PyMuPDF) — PDF text extraction
 - [litellm](https://github.com/BerriAI/litellm) — unified LLM API
 - [httpx](https://github.com/encode/httpx) — async HTTP client (for PDF downloads)
+- [matplotlib](https://matplotlib.org/) — LaTeX math rendering for HTML export
 - [tomli-w](https://github.com/hukkin/tomli-w) — TOML writing
 - [typer](https://github.com/fastapi/typer) — CLI framework
+
+### Optional dependencies
+
+Install with `uv pip install arxiv-coffee[graphics]` to enable image rendering of display math in supported terminals:
+
+- [textual-image](https://github.com/lnqs/textual-image) — inline image rendering in the TUI
 
 ## License
 
