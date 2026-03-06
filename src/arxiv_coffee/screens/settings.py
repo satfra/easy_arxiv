@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical, Horizontal, VerticalScroll
@@ -17,7 +15,7 @@ from textual.widgets import (
     TextArea,
 )
 
-from arxiv_coffee.config import saveConfig
+from arxiv_coffee.config import saveConfig, saveInterests, validateConfig
 from arxiv_coffee.models import AppConfig
 
 
@@ -217,76 +215,41 @@ class SettingsScreen(Screen):
         model = self.query_one("#model", Input).value.strip()
         base_url = self.query_one("#base-url", Input).value.strip()
         rpm_str = self.query_one("#requests-per-minute", Input).value.strip()
-
         cats_raw = self.query_one("#categories", Input).value
-        categories = [c.strip() for c in cats_raw.split(",") if c.strip()]
-
         max_papers_str = self.query_one("#max-papers", Input).value.strip()
         output_dir_str = self.query_one("#output-dir", Input).value.strip()
         interests_str = self.query_one("#interests-file", Input).value.strip()
-
-        # --- Validation ---
-        warnings: list[str] = []
-
-        if not api_key and not model.startswith("github_copilot/"):
-            warnings.append("API key is empty \u2014 AI features won't work.")
-
-        if not model:
-            warnings.append("Model is empty \u2014 using default.")
-            model = "openai/gpt-4o"
-
-        if not categories:
-            warnings.append("No categories \u2014 defaulting to hep-ph.")
-            categories = ["hep-ph"]
-
-        try:
-            max_papers = int(max_papers_str)
-            if max_papers < 1:
-                raise ValueError
-        except ValueError:
-            warnings.append("Invalid max papers \u2014 defaulting to 100.")
-            max_papers = 100
-
-        try:
-            requests_per_minute = int(rpm_str) if rpm_str else 0
-            if requests_per_minute < 0:
-                raise ValueError
-        except ValueError:
-            warnings.append("Invalid requests/min \u2014 defaulting to 0 (unlimited).")
-            requests_per_minute = 0
-
-        if not output_dir_str:
-            warnings.append("Output dir is empty \u2014 using ./output.")
-            output_dir_str = "./output"
-        output_dir = Path(output_dir_str)
-
-        if not interests_str:
-            warnings.append("Interests file path is empty \u2014 using default.")
-            interests_str = str(
-                Path.home() / ".config" / "arxiv-coffee" / "interests.md"
-            )
-        interests_file = Path(interests_str)
-
         include_cross_posts = self.query_one("#include-cross-posts", Switch).value
 
-        # --- Apply ---
-        self.config.api_key = api_key
-        self.config.model = model
-        self.config.base_url = base_url
-        self.config.requests_per_minute = requests_per_minute
-        self.config.categories = categories
-        self.config.max_papers = max_papers
-        self.config.include_cross_posts = include_cross_posts
-        self.config.output_dir = output_dir
-        self.config.interests_file = interests_file
+        new_config, warnings = validateConfig(
+            api_key=api_key,
+            model=model,
+            base_url=base_url,
+            requests_per_minute=rpm_str,
+            categories=cats_raw,
+            max_papers=max_papers_str,
+            output_dir=output_dir_str,
+            interests_file=interests_str,
+            include_cross_posts=include_cross_posts,
+        )
+
+        # Apply validated config to the shared instance
+        self.config.api_key = new_config.api_key
+        self.config.model = new_config.model
+        self.config.base_url = new_config.base_url
+        self.config.requests_per_minute = new_config.requests_per_minute
+        self.config.categories = new_config.categories
+        self.config.max_papers = new_config.max_papers
+        self.config.include_cross_posts = new_config.include_cross_posts
+        self.config.output_dir = new_config.output_dir
+        self.config.interests_file = new_config.interests_file
 
         # Save config
         saveConfig(self.config)
 
         # Save interests file
         interests_text = self.query_one("#interests-area", TextArea).text
-        self.config.interests_file.parent.mkdir(parents=True, exist_ok=True)
-        self.config.interests_file.write_text(interests_text, encoding="utf-8")
+        saveInterests(self.config, interests_text)
 
         # Show results
         if warnings:

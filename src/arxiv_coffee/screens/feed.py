@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
-
 from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -21,14 +18,17 @@ from textual.widgets import (
     ProgressBar,
 )
 
-from arxiv_coffee.arxiv_client import fetchLatestPapers, fetchPapersByDateRange
-from arxiv_coffee.copilot_auth import isCopilotModel, needsCopilotAuth
-from arxiv_coffee.llm import createRateLimiter, filterPapersByRelevance, summarizePaper
-from arxiv_coffee.library import addToLibrary
-from arxiv_coffee.markdown import MathMarkdown
-from arxiv_coffee.models import AppConfig, Paper, SummaryResult
-from arxiv_coffee.pdf_extractor import downloadAndExtract
-from arxiv_coffee.widgets import DualProgressBar
+from arxiv_coffee.arxiv_client import (
+    fetchLatestPapers,
+    fetchPapersByDateRange,
+    parseFetchInputs,
+)
+from arxiv_coffee.config import loadInterests
+from arxiv_coffee.copilot_auth import checkLlmAuth
+from arxiv_coffee.llm import filterPapersByRelevance
+from arxiv_coffee.models import AppConfig, Paper
+from arxiv_coffee.summarize_pipeline import PipelineProgress, summarizePapers
+from arxiv_coffee.widgets import DualProgressBar, MathMarkdown
 
 
 # arXiv categories commonly used in HEP and related fields
@@ -374,61 +374,45 @@ class FeedScreen(Screen):
         try:
             category = self.query_one("#category-select", Select).value
             max_str = self.query_one("#max-input", Input).value
-            max_papers = int(max_str) if max_str.isdigit() else self.config.max_papers
             use_dates = self.query_one("#date-toggle", Switch).value
             include_cross = self.query_one("#cross-posts-toggle", Switch).value
 
-            categories = [str(category)] if category else self.config.categories
-
+            start_str = ""
+            end_str = ""
             if use_dates:
-                start_str = self.query_one("#date-start", Input).value.strip()
-                end_str = self.query_one("#date-end", Input).value.strip()
+                start_str = self.query_one("#date-start", Input).value
+                end_str = self.query_one("#date-end", Input).value
 
-                if not start_str or not end_str:
-                    self.notify(
-                        "Enter both start and end dates (YYYY-MM-DD).",
-                        severity="error",
-                        title="Date Range",
-                    )
-                    return
+            try:
+                req = parseFetchInputs(
+                    category=str(category) if category else "",
+                    max_papers_str=max_str,
+                    use_dates=use_dates,
+                    include_cross_posts=include_cross,
+                    start_str=start_str,
+                    end_str=end_str,
+                    config=self.config,
+                )
+            except ValueError as exc:
+                self.notify(str(exc), severity="error", title="Date Range")
+                return
 
-                try:
-                    start = datetime.strptime(start_str, "%Y-%m-%d").replace(
-                        tzinfo=timezone.utc
-                    )
-                    end = datetime.strptime(end_str, "%Y-%m-%d").replace(
-                        hour=23, minute=59, second=59, tzinfo=timezone.utc
-                    )
-                except ValueError:
-                    self.notify(
-                        "Invalid date format. Use YYYY-MM-DD.",
-                        severity="error",
-                        title="Date Range",
-                    )
-                    return
-
-                if start > end:
-                    self.notify(
-                        "Start date must be before end date.",
-                        severity="error",
-                        title="Date Range",
-                    )
-                    return
-
+            if req.use_dates:
+                assert req.start is not None and req.end is not None
                 self.papers = await fetchPapersByDateRange(
                     self.config,
-                    start,
-                    end,
-                    categories=categories,
-                    max_results=max_papers,
-                    include_cross_posts=include_cross,
+                    req.start,
+                    req.end,
+                    categories=req.categories,
+                    max_results=req.max_papers,
+                    include_cross_posts=req.include_cross_posts,
                 )
             else:
                 self.papers = await fetchLatestPapers(
                     self.config,
-                    categories=categories,
-                    max_results=max_papers,
-                    include_cross_posts=include_cross,
+                    categories=req.categories,
+                    max_results=req.max_papers,
+                    include_cross_posts=req.include_cross_posts,
                 )
 
             self.selected.clear()
@@ -465,14 +449,9 @@ class FeedScreen(Screen):
             return
 
         # Load interests
-        interests = ""
-        if self.config.interests_file.exists():
-            try:
-                interests = self.config.interests_file.read_text(encoding="utf-8")
-            except OSError:
-                pass
+        interests = loadInterests(self.config)
 
-        if not interests.strip():
+        if not interests:
             self.notify(
                 "No interests file found. Write your interests in Settings first.",
                 severity="warning",
@@ -554,83 +533,29 @@ class FeedScreen(Screen):
         label.update(f"Starting summarization of {total} paper(s)...")
         container.add_class("visible")
 
-        limiter = createRateLimiter(self.config)
-        library_lock = asyncio.Lock()
-        downloading = 0
-        summarizing = 0
-        done = 0
-
-        def _refreshBar() -> None:
-            """Push current counters to the bar widget and label."""
+        def _onProgress(progress: PipelineProgress) -> None:
+            """Map pipeline progress to UI widgets."""
             bar.updateCounts(
-                downloading=downloading,
-                summarizing=summarizing,
-                done=done,
-                total=total,
+                downloading=progress.downloading,
+                summarizing=progress.summarizing,
+                done=progress.done,
+                total=progress.total,
             )
             parts: list[str] = []
-            if downloading:
-                parts.append(f"Downloading: {downloading}")
-            if summarizing:
-                parts.append(f"Summarizing: {summarizing}")
-            parts.append(f"Done: {done}/{total}")
+            if progress.downloading:
+                parts.append(f"Downloading: {progress.downloading}")
+            if progress.summarizing:
+                parts.append(f"Summarizing: {progress.summarizing}")
+            parts.append(f"Done: {progress.done}/{progress.total}")
             label.update(" | ".join(parts))
 
-        async def _processPaper(paper: Paper) -> bool:
-            """Download, summarize, and save a single paper."""
-            nonlocal downloading, summarizing, done
-            phase = "pending"
-            try:
-                # -- Download phase --
-                phase = "downloading"
-                downloading += 1
-                _refreshBar()
-                full_text = await downloadAndExtract(paper)
+        result = await summarizePapers(
+            papers_to_summarize,
+            self.config,
+            on_progress=_onProgress,
+        )
 
-                # -- Summarize phase --
-                phase = "summarizing"
-                downloading -= 1
-                summarizing += 1
-                _refreshBar()
-                summary_text = await summarizePaper(
-                    paper, full_text, self.config, limiter=limiter
-                )
-
-                result = SummaryResult(
-                    paper=paper,
-                    summary_text=summary_text,
-                    generated_at=datetime.now(timezone.utc),
-                    model_used=self.config.model,
-                )
-                async with library_lock:
-                    addToLibrary(result, self.config.output_dir)
-
-                # -- Done --
-                summarizing -= 1
-                done += 1
-                _refreshBar()
-                return True
-
-            except Exception:
-                # Undo whichever phase this paper was in.
-                if phase == "downloading":
-                    downloading -= 1
-                elif phase == "summarizing":
-                    summarizing -= 1
-                done += 1
-                _refreshBar()
-                return False
-
-        results = await asyncio.gather(*(_processPaper(p) for p in papers_to_summarize))
-
-        success = sum(results)
-        errors = total - success
-
-        summary = f"Completed: {success} summarized"
-        if errors:
-            summary += f", {errors} failed"
-        summary += f". Output: {self.config.output_dir}"
-
+        summary = result.summary + f". Output: {self.config.output_dir}"
         label.update(summary)
         self._setBusy(False)
         self._setStatus(summary)
@@ -650,27 +575,31 @@ class FeedScreen(Screen):
         Returns True if auth is ready, False if the user cancelled or
         auth failed.
         """
-        if isCopilotModel(self.config.model):
-            if needsCopilotAuth():
-                from arxiv_coffee.screens.copilot_auth import CopilotAuthScreen
-
-                result = await self.app.push_screen_wait(CopilotAuthScreen())
-                if not result:
-                    self.notify(
-                        "Copilot authentication cancelled.",
-                        severity="warning",
-                    )
-                    return False
+        ready, reason = checkLlmAuth(self.config.model, self.config.api_key)
+        if ready:
             return True
 
-        if not self.config.api_key:
+        if reason == "copilot_auth_needed":
+            from arxiv_coffee.screens.copilot_auth import CopilotAuthScreen
+
+            result = await self.app.push_screen_wait(CopilotAuthScreen())
+            if not result:
+                self.notify(
+                    "Copilot authentication cancelled.",
+                    severity="warning",
+                )
+                return False
+            return True
+
+        if reason == "no_api_key":
             self.notify(
                 "No API key configured. Go to Settings (press Escape, then s).",
                 severity="error",
                 title="Missing API Key",
             )
             return False
-        return True
+
+        return False
 
     def _populateTable(self) -> None:
         """Fill the DataTable with current papers."""

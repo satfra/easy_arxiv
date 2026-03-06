@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-import shutil
-import subprocess
-import sys
 from pathlib import Path
-from urllib.parse import quote
 
 from textual import on
 from textual.app import ComposeResult
@@ -12,34 +8,13 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Header, Footer, Static, Input, Button, DataTable, Label
 
-from arxiv_coffee.library import deleteFromLibrary, parseSummaryFile
+from arxiv_coffee.integrations import isObsidianInstalled, openInObsidian
+from arxiv_coffee.library import deleteFromLibrary, listSummaries
 from arxiv_coffee.models import AppConfig
 from arxiv_coffee.screens.summary import SummaryScreen
 
 # Markdown logo (simplified M-down-arrow glyph) used as the button label.
 _OBSIDIAN_LABEL = "\u24c2 Obsidian"
-
-
-def _isObsidianInstalled() -> bool:
-    """Return True if Obsidian appears to be installed."""
-    if shutil.which("obsidian"):
-        return True
-    if sys.platform == "darwin":
-        return Path("/Applications/Obsidian.app").exists()
-    return False
-
-
-def _openInObsidian(vault_path: Path) -> None:
-    """Open a directory as an Obsidian vault via the obsidian:// URI scheme."""
-    uri = f"obsidian://open?path={quote(str(vault_path.resolve()), safe='')}"
-    if sys.platform == "darwin":
-        subprocess.Popen(["open", uri])
-    elif sys.platform == "win32":
-        import os
-
-        os.startfile(uri)  # type: ignore[attr-defined]  # noqa: S606
-    else:
-        subprocess.Popen(["xdg-open", uri])
 
 
 class _ConfirmDeleteScreen(ModalScreen[bool]):
@@ -161,7 +136,7 @@ class LibraryScreen(Screen):
                 placeholder="Search by title, category, or arXiv ID...",
                 id="search-input",
             )
-            if _isObsidianInstalled():
+            if isObsidianInstalled():
                 yield Button(_OBSIDIAN_LABEL, variant="default", id="obsidian-btn")
 
         table = DataTable(id="lib-table", cursor_type="row")
@@ -183,24 +158,7 @@ class LibraryScreen(Screen):
 
     def _loadEntries(self) -> None:
         """Scan the output directory for summary files."""
-        self.entries.clear()
-        output_dir = self.config.output_dir
-
-        if not output_dir.exists():
-            return
-
-        for md_file in sorted(output_dir.rglob("*.md"), reverse=True):
-            if md_file.name == "library.md":
-                continue
-            if md_file.parent == output_dir:
-                continue
-
-            entry = parseSummaryFile(md_file)
-            if entry is not None:
-                self.entries.append(entry)
-
-        # Sort by date descending
-        self.entries.sort(key=lambda e: e["date"], reverse=True)
+        self.entries = listSummaries(self.config.output_dir)
 
     def _populateTable(self, filter_text: str = "") -> None:
         """Fill the table, optionally filtered by search text."""
@@ -288,7 +246,7 @@ class LibraryScreen(Screen):
             self.notify("Output directory does not exist yet.", severity="warning")
             return
         try:
-            _openInObsidian(output_dir)
+            openInObsidian(output_dir)
             self.notify("Opening library in Obsidian...")
         except OSError as exc:
             self.notify(f"Failed to open Obsidian: {exc}", severity="error")

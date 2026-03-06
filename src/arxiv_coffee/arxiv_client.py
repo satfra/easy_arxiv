@@ -1,12 +1,77 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import arxiv
 
 from arxiv_coffee.models import AppConfig, Paper
+
+
+@dataclass
+class FetchRequest:
+    """Validated parameters for a paper fetch operation."""
+
+    categories: list[str]
+    max_papers: int
+    include_cross_posts: bool
+    use_dates: bool = False
+    start: datetime | None = None
+    end: datetime | None = None
+
+
+def parseFetchInputs(
+    *,
+    category: str,
+    max_papers_str: str,
+    use_dates: bool,
+    include_cross_posts: bool,
+    start_str: str = "",
+    end_str: str = "",
+    config: AppConfig,
+) -> FetchRequest:
+    """Parse and validate raw fetch form inputs into a FetchRequest.
+
+    Raises ``ValueError`` with a user-friendly message when any input is
+    invalid (e.g. bad date format, start > end).
+    """
+    max_papers = int(max_papers_str) if max_papers_str.isdigit() else config.max_papers
+    categories = [category] if category else config.categories
+
+    start: datetime | None = None
+    end: datetime | None = None
+
+    if use_dates:
+        start_stripped = start_str.strip()
+        end_stripped = end_str.strip()
+
+        if not start_stripped or not end_stripped:
+            raise ValueError("Enter both start and end dates (YYYY-MM-DD).")
+
+        try:
+            start = datetime.strptime(start_stripped, "%Y-%m-%d").replace(
+                tzinfo=timezone.utc
+            )
+            end = datetime.strptime(end_stripped, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59, tzinfo=timezone.utc
+            )
+        except ValueError:
+            raise ValueError("Invalid date format. Use YYYY-MM-DD.") from None
+
+        if start > end:
+            raise ValueError("Start date must be before end date.")
+
+    return FetchRequest(
+        categories=categories,
+        max_papers=max_papers,
+        include_cross_posts=include_cross_posts,
+        use_dates=use_dates,
+        start=start,
+        end=end,
+    )
+
 
 # arXiv announces new papers at ~20:00 US Eastern on weekdays.
 # Submissions close at 14:00 ET, but the batch is not visible on arXiv

@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from arxiv_coffee.models import Paper, SummaryResult
+from arxiv_coffee.models import SummaryResult
 
 
 def _slugify(text: str, max_len: int = 60) -> str:
@@ -224,6 +224,31 @@ def addToLibrary(result: SummaryResult, output_dir: Path) -> Path:
         updateLibraryIndex(output_dir)
 
     return summary_path
+
+
+def listSummaries(output_dir: Path) -> list[dict]:
+    """Scan the output directory for summary files and return parsed metadata.
+
+    Returns a list of dicts (as produced by ``parseSummaryFile``) sorted by
+    date descending.  Skips ``library.md`` and files in the top-level
+    output directory.
+    """
+    entries: list[dict] = []
+    if not output_dir.exists():
+        return entries
+
+    for md_file in sorted(output_dir.rglob("*.md"), reverse=True):
+        if md_file.name == "library.md":
+            continue
+        if md_file.parent == output_dir:
+            continue
+
+        entry = parseSummaryFile(md_file)
+        if entry is not None:
+            entries.append(entry)
+
+    entries.sort(key=lambda e: e["date"], reverse=True)
+    return entries
 
 
 def deleteFromLibrary(summary_path: Path, output_dir: Path) -> None:

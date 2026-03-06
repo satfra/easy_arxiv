@@ -97,6 +97,28 @@ def pollForAccessToken(device_code: str) -> str:
     return access_token
 
 
+def checkLlmAuth(model: str, api_key: str) -> tuple[bool, str]:
+    """Check whether LLM authentication is ready.
+
+    Returns a (ready, reason) tuple.  ``ready`` is True when the caller
+    can proceed with LLM calls.  When False, ``reason`` explains what is
+    missing:
+
+    - ``"copilot_auth_needed"`` — a Copilot model is configured but no
+      cached token exists; the caller should trigger the device flow.
+    - ``"no_api_key"`` — a non-Copilot model is configured but the API
+      key is empty.
+    """
+    if isCopilotModel(model):
+        if needsCopilotAuth():
+            return False, "copilot_auth_needed"
+        return True, ""
+
+    if not api_key:
+        return False, "no_api_key"
+    return True, ""
+
+
 async def runDeviceFlow() -> tuple[str, str, asyncio.Task[str]]:
     """Start the GitHub Copilot OAuth device flow.
 

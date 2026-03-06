@@ -7,7 +7,7 @@ from textual.containers import VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Static
 
-from arxiv_coffee.markdown import MathMarkdown
+from arxiv_coffee.widgets import MathMarkdown
 
 
 class SummaryScreen(Screen):
