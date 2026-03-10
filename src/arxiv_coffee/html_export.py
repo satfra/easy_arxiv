@@ -1,15 +1,9 @@
 from __future__ import annotations
 
-import base64
-import io
 from pathlib import Path
 
-import matplotlib
-import matplotlib.pyplot as plt
 from markdown_it import MarkdownIt
 from mdit_py_plugins.dollarmath import dollarmath_plugin
-
-matplotlib.use("agg")
 
 
 # ---------------------------------------------------------------------------
@@ -97,16 +91,6 @@ th, td {
 }
 th { background: #f6f8fa; font-weight: 600; }
 tr:nth-child(even) td { background: #f9fafb; }
-img.math-inline {
-    vertical-align: middle;
-    height: 1.25em;
-    margin: 0 0.1em;
-}
-img.math-display {
-    display: block;
-    margin: 1.2em auto;
-    max-width: 100%;
-}
 ul, ol { padding-left: 2em; margin: 0.6em 0; }
 li { margin: 0.2em 0; }
 .toc {
@@ -131,57 +115,6 @@ li { margin: 0.2em 0; }
 
 
 # ---------------------------------------------------------------------------
-# Math rendering
-# ---------------------------------------------------------------------------
-
-
-def _renderMathToPng(latex: str, *, display: bool = False) -> bytes:
-    """Render a LaTeX expression to PNG bytes using matplotlib mathtext.
-
-    Raises ValueError if the expression cannot be rendered.
-    """
-    dpi = 180 if display else 150
-    # matplotlib mathtext requires the expression to be wrapped in $...$
-    expr = f"${latex}$"
-
-    fig = plt.figure(figsize=(0.01, 0.01))
-    try:
-        text = fig.text(0, 0, expr, fontsize=13 if display else 11)
-        fig.canvas.draw()
-        bbox = text.get_window_extent(renderer=fig.canvas.get_renderer())
-        # Add small padding
-        pad = 4
-        width = max(1, int(bbox.width) + pad * 2)
-        height = max(1, int(bbox.height) + pad * 2)
-        fig.set_size_inches(width / dpi, height / dpi)
-        text.set_position((pad / width, pad / height))
-        buf = io.BytesIO()
-        fig.savefig(
-            buf,
-            format="png",
-            dpi=dpi,
-            bbox_inches=None,
-            facecolor="white",
-            edgecolor="none",
-        )
-        buf.seek(0)
-        return buf.read()
-    except Exception as exc:
-        raise ValueError(f"Failed to render LaTeX expression: {latex!r}") from exc
-    finally:
-        plt.close(fig)
-
-
-def _mathToImgTag(latex: str, *, display: bool = False) -> str:
-    """Render LaTeX to a base64-encoded PNG img tag."""
-    png_bytes = _renderMathToPng(latex, display=display)
-    b64 = base64.b64encode(png_bytes).decode("ascii")
-    css_class = "math-display" if display else "math-inline"
-    alt = latex.replace('"', "&quot;")
-    return f'<img class="{css_class}" src="data:image/png;base64,{b64}" alt="{alt}">'
-
-
-# ---------------------------------------------------------------------------
 # Markdown → HTML conversion
 # ---------------------------------------------------------------------------
 
@@ -194,26 +127,25 @@ def _buildParser() -> MarkdownIt:
 def convertMarkdownToHtml(md_content: str) -> str:
     """Convert a markdown string (with LaTeX math) to an HTML fragment.
 
-    Inline math ($...$) is rendered as a small inline PNG image.
-    Display math ($$...$$) is rendered as a centred block PNG image.
-    All math rendering uses matplotlib mathtext — no JavaScript required.
+    Inline math ($...$) is emitted as ``\\(...\\)`` delimiters and display
+    math ($$...$$) as ``\\[...\\]`` delimiters for MathJax to render
+    client-side in the browser.
+
     The returned string is an HTML fragment suitable for insertion into a
     <body> element; it does not include <html> / <head> / <body> tags.
     """
     md = _buildParser()
 
-    # Override the renderer for math tokens.
-    # add_render_rule binds self.renderer as the first arg via __get__, so the
-    # effective signature is (self, tokens, idx, options, env).
+    # Override the renderer for math tokens to emit MathJax delimiters.
     def _renderMathInline(
         slf: object, tokens: list, idx: int, options: object, env: object
     ) -> str:
-        return _mathToImgTag(tokens[idx].content, display=False)
+        return f"\\({tokens[idx].content}\\)"
 
     def _renderMathBlock(
         slf: object, tokens: list, idx: int, options: object, env: object
     ) -> str:
-        return _mathToImgTag(tokens[idx].content, display=True)
+        return f"\\[{tokens[idx].content}\\]"
 
     md.add_render_rule("math_inline", _renderMathInline)
     md.add_render_rule("math_block", _renderMathBlock)
@@ -226,11 +158,23 @@ def convertMarkdownToHtml(md_content: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def wrapInHtmlDocument(body: str, title: str) -> str:
-    """Wrap an HTML fragment in a complete, self-contained HTML5 document.
+_MATHJAX_CONFIG = r"""
+MathJax = {
+  tex: {
+    inlineMath: [['\\(', '\\)']],
+    displayMath: [['\\[', '\\]']]
+  }
+};
+""".strip()
 
-    All styles are inline — no external resources, no JavaScript.
-    Safe to attach to emails or open in any browser.
+_MATHJAX_SRC = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+
+
+def wrapInHtmlDocument(body: str, title: str) -> str:
+    """Wrap an HTML fragment in a complete HTML5 document.
+
+    All styles are inline. LaTeX math is rendered client-side by MathJax
+    loaded from a CDN, so an internet connection and JavaScript are required.
     """
     escaped_title = title.replace("<", "&lt;").replace(">", "&gt;")
     return (
@@ -241,6 +185,9 @@ def wrapInHtmlDocument(body: str, title: str) -> str:
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{escaped_title}</title>\n"
         f"<style>\n{_CSS}\n</style>\n"
+        f"<script>\n{_MATHJAX_CONFIG}\n</script>\n"
+        f'<script id="MathJax-script" async '
+        f'src="{_MATHJAX_SRC}"></script>\n'
         "</head>\n"
         "<body>\n"
         f"{body}"
@@ -286,7 +233,7 @@ def buildDigestHtml(md_paths: list[Path], title: str) -> str:
     """Combine multiple summary markdown files into a single HTML document.
 
     Produces a page with a table of contents followed by each summary as
-    a separate section. All math is pre-rendered as inline PNG images.
+    a separate section. Math is rendered client-side by MathJax.
     """
     toc_items: list[str] = []
     sections: list[str] = []
