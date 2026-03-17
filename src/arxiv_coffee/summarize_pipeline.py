@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 from arxiv_coffee.library import addToLibrary
 from arxiv_coffee.llm import createRateLimiter, summarizePaper
@@ -110,7 +113,8 @@ async def summarizePapers(
             _emitProgress()
             return True
 
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to process paper '%s': %s", paper.title, exc)
             # Undo whichever phase this paper was in.
             if phase == "downloading":
                 downloading -= 1

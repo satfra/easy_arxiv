@@ -72,15 +72,15 @@ async def claudeAgentSdkCompletion(
         "--system-prompt", system_prompt,
         "--output-format", "text",
         "--no-session-persistence",
-        user_message,
     ]
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
+        stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
-    stdout, stderr = await proc.communicate()
+    stdout, stderr = await proc.communicate(input=user_message.encode())
 
     if proc.returncode != 0:
         err_text = stderr.decode(errors="replace").strip()
