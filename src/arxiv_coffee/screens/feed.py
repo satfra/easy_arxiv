@@ -579,6 +579,22 @@ class FeedScreen(Screen):
         if ready:
             return True
 
+        if reason == "claude_cli_not_found":
+            self.notify(
+                "The 'claude' CLI is not installed. See https://claude.ai/download",
+                severity="error",
+                title="Claude CLI Missing",
+            )
+            return False
+
+        if reason == "claude_agent_sdk_auth_needed":
+            self.notify(
+                "Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN in your environment.",
+                severity="error",
+                title="Claude CLI Auth",
+            )
+            return False
+
         if reason == "copilot_auth_needed":
             from arxiv_coffee.screens.copilot_auth import CopilotAuthScreen
 

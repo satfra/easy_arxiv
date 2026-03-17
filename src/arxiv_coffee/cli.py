@@ -46,6 +46,18 @@ def _ensureAuth(config: AppConfig) -> None:
         _err("Error: No API key configured. Set llm.api_key in config.toml.")
         raise typer.Exit(1)
 
+    if reason == "claude_cli_not_found":
+        _err("Error: The 'claude' CLI is not installed or not on PATH.")
+        _err("Install it from https://claude.ai/download")
+        raise typer.Exit(1)
+
+    if reason == "claude_agent_sdk_auth_needed":
+        _err("Error: Claude CLI authentication required.")
+        _err("Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN in your environment.")
+        _err("  For API key:   export ANTHROPIC_API_KEY=sk-ant-...")
+        _err("  For Claude Max: run 'claude setup-token' and export CLAUDE_CODE_OAUTH_TOKEN")
+        raise typer.Exit(1)
+
     if reason == "copilot_auth_needed":
         _err("GitHub Copilot authentication required.")
         _err("Starting device flow...")

@@ -104,11 +104,18 @@ def checkLlmAuth(model: str, api_key: str) -> tuple[bool, str]:
     can proceed with LLM calls.  When False, ``reason`` explains what is
     missing:
 
+    - ``"claude_agent_sdk_auth_needed"`` — a claude_agent_sdk/ model is
+      configured but no token is set in the environment.
     - ``"copilot_auth_needed"`` — a Copilot model is configured but no
       cached token exists; the caller should trigger the device flow.
     - ``"no_api_key"`` — a non-Copilot model is configured but the API
       key is empty.
     """
+    from arxiv_coffee.claude_agent_sdk import checkClaudeAgentSdkAuth, isClaudeAgentSdkModel
+
+    if isClaudeAgentSdkModel(model):
+        return checkClaudeAgentSdkAuth()
+
     if isCopilotModel(model):
         if needsCopilotAuth():
             return False, "copilot_auth_needed"

@@ -3,7 +3,7 @@
 
 [llm]
 # API key for your LLM provider (required for most providers)
-# Leave empty when using github_copilot/ — it authenticates via OAuth device flow.
+# Leave empty when using github_copilot/ or claude_agent_sdk/ — they use OAuth.
 api_key = ""
 
 # Model identifier in litellm format.
@@ -15,6 +15,8 @@ api_key = ""
 #   "github_copilot/gpt-4o"              (uses your GitHub Copilot subscription)
 #   "github_copilot/claude-sonnet-4-20250514"
 #   "github/gpt-4o"                      (GitHub Models — needs GITHUB_API_KEY)
+#   "claude_agent_sdk/claude-sonnet-4-20250514"  (Claude Max — needs CLAUDE_CODE_OAUTH_TOKEN)
+#   "claude_agent_sdk/claude-opus-4-1"           (Claude Max — slower, higher quality)
 model = "openai/gpt-4o"
 
 # Optional: custom API base URL (e.g. for a local or proxy endpoint)

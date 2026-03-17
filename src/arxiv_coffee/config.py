@@ -97,7 +97,7 @@ def validateConfig(
     """
     warnings: list[str] = []
 
-    if not api_key and not model.startswith("github_copilot/"):
+    if not api_key and not model.startswith("github_copilot/") and not model.startswith("claude_agent_sdk/"):
         warnings.append("API key is empty \u2014 AI features won't work.")
 
     if not model:

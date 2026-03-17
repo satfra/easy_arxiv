@@ -8,6 +8,7 @@ from collections.abc import Callable
 
 import litellm
 
+from arxiv_coffee.claude_agent_sdk import claudeAgentSdkCompletion, isClaudeAgentSdkModel
 from arxiv_coffee.models import AppConfig, Paper
 
 logger = logging.getLogger(__name__)
@@ -71,7 +72,7 @@ def _modelHandlesAuth(model: str) -> bool:
     Some providers (e.g. github_copilot/) use OAuth device flow managed
     by litellm and do not require a user-supplied API key.
     """
-    return model.startswith("github_copilot/")
+    return model.startswith("github_copilot/") or model.startswith("claude_agent_sdk/")
 
 
 def _buildCompletionKwargs(config: AppConfig) -> dict:
@@ -175,16 +176,23 @@ async def _filterBatch(
             f"## Papers to Evaluate\n\n{papers_text}"
         )
 
-        response = await litellm.acompletion(
-            messages=[
-                {"role": "system", "content": FILTER_SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.2,
-            **kwargs,
-        )
-
-        raw = response.choices[0].message.content.strip()
+        if isClaudeAgentSdkModel(kwargs["model"]):
+            raw = await claudeAgentSdkCompletion(
+                system_prompt=FILTER_SYSTEM_PROMPT,
+                user_message=user_message,
+                model=kwargs["model"],
+                temperature=0.2,
+            )
+        else:
+            response = await litellm.acompletion(
+                messages=[
+                    {"role": "system", "content": FILTER_SYSTEM_PROMPT},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=0.2,
+                **kwargs,
+            )
+            raw = response.choices[0].message.content.strip()
         # Strip markdown code fences if present
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[1]
@@ -238,8 +246,9 @@ async def filterPapersByRelevance(
         raise ValueError("No API key configured. Set llm.api_key in config.toml.")
 
     kwargs = _buildCompletionKwargs(config)
+    effective_concurrent = min(max_concurrent, 2) if isClaudeAgentSdkModel(config.model) else max_concurrent
     limiter = _RateLimiter(
-        rpm=config.requests_per_minute, max_concurrent=max_concurrent
+        rpm=config.requests_per_minute, max_concurrent=effective_concurrent
     )
 
     batches = [papers[i : i + batch_size] for i in range(0, len(papers), batch_size)]
@@ -307,6 +316,13 @@ async def summarizePaper(
     if limiter is not None:
         await limiter.acquire()
     try:
+        if isClaudeAgentSdkModel(config.model):
+            return await claudeAgentSdkCompletion(
+                system_prompt=SUMMARY_SYSTEM_PROMPT,
+                user_message=user_message,
+                model=config.model,
+                temperature=0.3,
+            )
         response = await litellm.acompletion(
             messages=[
                 {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},

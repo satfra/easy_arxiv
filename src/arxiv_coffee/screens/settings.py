@@ -105,7 +105,8 @@ class SettingsScreen(Screen):
                 with Vertical(classes="form-group"):
                     yield Label("Model", classes="form-label")
                     yield Static(
-                        "litellm format: openai/gpt-4o, anthropic/claude-sonnet-4-20250514, github_copilot/gpt-4o, etc.",
+                        "litellm format: openai/gpt-4o, anthropic/claude-sonnet-4-20250514, github_copilot/gpt-4o, "
+                        "claude_agent_sdk/claude-sonnet-4-20250514 (Claude Max), etc.",
                         classes="form-hint",
                     )
                     yield Input(value=self.config.model, id="model")

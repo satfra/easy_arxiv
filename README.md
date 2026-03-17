@@ -95,6 +95,54 @@ api_key = "ghp_..."
 model = "github/gpt-4o"
 ```
 
+### Using your Claude subscription (via Claude Code CLI)
+
+If you have a [Claude Max, Team, or Enterprise](https://claude.ai) subscription, you can use it directly as the LLM provider via the [Claude Code CLI](https://claude.ai/download) — no separate API key purchase required.
+
+1. Install the Claude Code CLI if you haven't already (see [claude.ai/download](https://claude.ai/download)). Verify it's on your PATH:
+
+```bash
+claude --version
+```
+
+2. Authenticate. You have two options:
+
+   **Option A — Claude Max / Pro subscription (OAuth token):**
+
+   ```bash
+   claude setup-token
+   export CLAUDE_CODE_OAUTH_TOKEN=<your-token>
+   ```
+
+   **Option B — Anthropic API key:**
+
+   ```bash
+   export ANTHROPIC_API_KEY=sk-ant-...
+   ```
+
+3. Set the model to a `claude_agent_sdk/` prefixed name in your config:
+
+```toml
+[llm]
+api_key = ""
+model = "claude_agent_sdk/claude-sonnet-4-20250514"
+```
+
+4. Run as usual — the CLI handles the rest:
+
+```bash
+uv run main.py feed | uv run main.py rate | uv run main.py summarize
+```
+
+Available models (depends on your subscription tier):
+
+| Model string                                   | Description                    |
+| ---------------------------------------------- | ------------------------------ |
+| `claude_agent_sdk/claude-sonnet-4-20250514`    | Claude Sonnet — fast, capable  |
+| `claude_agent_sdk/claude-opus-4-1`             | Claude Opus — slower, stronger |
+
+> **Note:** Each LLM call spawns a `claude -p` subprocess, which is heavier than a direct HTTP request. Concurrency is automatically reduced to 2 parallel batches when using `claude_agent_sdk/` models. Wall-clock time for batch operations will be slower than with direct API providers.
+
 ## Usage
 
 ### TUI (interactive)
