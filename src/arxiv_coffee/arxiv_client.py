@@ -75,10 +75,13 @@ def parseFetchInputs(
 
 # arXiv announces new papers at ~20:00 US Eastern on weekdays.
 # Submissions close at 14:00 ET, but the batch is not visible on arXiv
-# until the 20:00 announcement.  We use the announcement hour so the
-# window only advances once papers are actually available.
+# until the 20:00 announcement.  We use the announcement hour for the
+# window end so it only advances once papers are actually available,
+# but the submission hour for the window start because paper.published
+# reflects submission time, not announcement time.
 _ARXIV_TZ = ZoneInfo("US/Eastern")
-_CUTOFF_HOUR = 20
+_ANNOUNCEMENT_HOUR = 20  # when the batch becomes visible on arXiv
+_SUBMISSION_HOUR = 14    # when submissions close for each batch
 
 
 def _resultToPaper(result: arxiv.Result) -> Paper:
@@ -119,34 +122,39 @@ def _latestAnnouncementWindow() -> tuple[datetime, datetime]:
 
     arXiv accepts submissions continuously but announces new papers once
     per weekday.  Submissions close at 14:00 US/Eastern, but the batch
-    is published at ~20:00 ET.  We use 20:00 as the effective cutoff so
-    the window only advances once papers are actually visible.
+    is published at ~20:00 ET.  The window end uses 20:00 so it only
+    advances once papers are actually visible.  The window start uses
+    14:00 (submission close) because paper.published reflects submission
+    time, not announcement time.
 
-    On Monday the window covers Friday 20:00 ET -> Monday 20:00 ET
+    On Monday the window covers Friday 14:00 ET -> Monday 20:00 ET
     (weekend submissions are batched together).
     """
     now_et = datetime.now(_ARXIV_TZ)
 
-    # Current cutoff today at 14:00 ET.
-    today_cutoff = now_et.replace(hour=_CUTOFF_HOUR, minute=0, second=0, microsecond=0)
+    # Window end: the most recent announcement (20:00 ET on a weekday).
+    today_announcement = now_et.replace(hour=_ANNOUNCEMENT_HOUR, minute=0, second=0, microsecond=0)
 
-    if now_et >= today_cutoff:
-        # We are past today's cutoff, so the latest window ends now.
-        end_cutoff = today_cutoff
+    if now_et >= today_announcement:
+        # We are past today's announcement, so the latest window ends now.
+        end_cutoff = today_announcement
     else:
-        # Before today's cutoff — the latest completed window ended at
-        # yesterday's cutoff (or last Friday if today is Monday).
-        end_cutoff = today_cutoff - timedelta(days=1)
+        # Before today's announcement — the latest completed window ended at
+        # yesterday's announcement (or last Friday if today is Mon/Sat/Sun).
+        end_cutoff = today_announcement - timedelta(days=1)
 
     # Walk backwards over weekends: if end_cutoff falls on Sat/Sun, step
     # back to Friday.
     while end_cutoff.weekday() >= 5:  # 5=Saturday, 6=Sunday
         end_cutoff -= timedelta(days=1)
 
-    # The start of the window is the previous weekday cutoff.
+    # The start of the window is the previous weekday at submission close
+    # (14:00 ET), because that is where the preceding batch ends and
+    # paper.published timestamps are set at submission time.
     start_cutoff = end_cutoff - timedelta(days=1)
     while start_cutoff.weekday() >= 5:
         start_cutoff -= timedelta(days=1)
+    start_cutoff = start_cutoff.replace(hour=_SUBMISSION_HOUR, minute=0, second=0, microsecond=0)
 
     # Convert to UTC.
     start_utc = start_cutoff.astimezone(timezone.utc)
